@@ -23,7 +23,7 @@ setup(
     name='hephaistos',
     version='0.1.0',
     description='hephAIstos is a machine learning package that can run with CPU, GPU and QPU',
-    url='https://github.com/shuds13/pyexample',
+    url='https://github.com/xaviervasques/hephaistos.git',
     author='Xavier Vasques',
     author_email='xaviervasques@lrenc.fr',
     license='Apache License version 2',

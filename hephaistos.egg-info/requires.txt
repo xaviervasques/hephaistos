@@ -1,0 +1,10 @@
+pandas
+numpy
+scipy
+sklearn
+category_encoders
+tensorflow
+matplotlib
+qiskit
+qiskit_machine_learning
+hashlib
