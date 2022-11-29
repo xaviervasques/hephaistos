@@ -44,7 +44,7 @@ setup(
         'Development Status :: 1 - Planning',
         'Intended Audience :: Science/Research',
         'License :: Apache License version 2',
-        'Operating System :: Linux, MacOS, Windows',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
