@@ -322,7 +322,7 @@ def mlp_regression(X, X_train, X_test, y, y_train, y_test, max_iter_r = None, hi
 # Neural Network (MLP)
 def mlp_auto_regression(X, X_train, X_test, y, y_train, y_test, output_folder= None):
     """
-    Multi-layer Perceptron classifier: Run automatically different hyperparameters combinations and return the best result
+    Multi-layer Perceptron : Run automatically different hyperparameters combinations and return the best result
 
     Inputs:
         X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation selected in inputs.py

@@ -352,7 +352,7 @@ def lda(X, X_train, X_test, y, y_train, y_test, cv, output_folder = None):
 # Quadratic discriminant analysis
 def qda(X, X_train, X_test, y, y_train, y_test, cv, output_folder = None):
     """
-    Quandratic Discriminant Analysis
+    Quadratic Discriminant Analysis
 
     Inputs:
         X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation selected in inputs.py
