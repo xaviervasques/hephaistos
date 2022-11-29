@@ -28,6 +28,9 @@ tensorflow
 matplotlib
 qiskit
 qiskit_machine_learning
+joblib
+tensorflow
+
 
 
 
