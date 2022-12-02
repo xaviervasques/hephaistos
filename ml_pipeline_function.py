@@ -362,6 +362,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             print("\n")
             X_train=standardscaler(X_train)
             X_test=standardscaler(X_test)
+            print("OOKOKOKOKOKOKOKOKOKOKOKOKOKOKOKOKOKO")
             scaling_method = "StandardScaler"
             
         if rescaling == 'minmax_scaler':
@@ -802,7 +803,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
                 df_technique = pd.DataFrame(new_row_scaling, columns=['MLP_neural_network'], index=["Rescaling Method"])
                 df_missing = pd.DataFrame(new_row_missing, columns=['MLP_neural_network'], index=["Missing Method"])
                 df_extraction = pd.DataFrame(new_row_extraction, columns=['MLP_neural_network'], index=["Extraction Method"])
-                df_results = mlp_neural_network(X, X_train, X_test, y, y_train, y_test, inputs.cv, max_iter, hidden_layer_sizes, mlp_activation, solver, alpha, mlp_learning_rate, learning_rate_init, output_folder)
+                df_results = mlp_neural_network(X, X_train, X_test, y, y_train, y_test, cv, max_iter, hidden_layer_sizes, mlp_activation, solver, alpha, mlp_learning_rate, learning_rate_init, output_folder)
                 mlp_neural_network_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
                 classification_results = pd.concat([classification_results,mlp_neural_network_output], axis=1, join='outer')
                 print("MLP Neural Network: OK\n")

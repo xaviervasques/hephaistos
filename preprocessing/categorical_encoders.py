@@ -26,8 +26,6 @@ from sklearn.preprocessing import LabelEncoder
 import category_encoders as ce
 import hashlib
 
-# Import selected parameters from inputs.py
-import inputs
 
 """
 

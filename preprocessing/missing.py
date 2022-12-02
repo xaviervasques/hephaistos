@@ -23,8 +23,6 @@ import sys
 import numpy as np
 import pandas as pd
 
-# Importing selected parameters from inputs.py
-import inputs
 
 """
 

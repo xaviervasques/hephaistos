@@ -19,17 +19,18 @@
 
 # All required dependencies
 
+joblib
 numpy
-pandas
 scipy
+pandas
 sklearn
 category_encoders
-tensorflow
+hashlib
 matplotlib
+tensorflow
 qiskit
 qiskit_machine_learning
-joblib
-tensorflow
+
 
 
 

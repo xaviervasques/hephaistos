@@ -28,7 +28,6 @@ Regression algorithms:
 
 """
 
-import inputs
 
 import warnings
 warnings.filterwarnings('always')  # "error", "ignore", "always", "default", "module" or "once"
