@@ -1,2 +1,3 @@
-# hephaistos
-hephAIstos is a machine learning framework running on CPU, GPU and QPU
+# HephAIstos for Running Machine Learning on CPUs, GPUs and QPUs
+
+
