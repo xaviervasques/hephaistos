@@ -64,6 +64,46 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
     We will apply all the desired procedures to the dataframe df
     
     """
+    
+    if(missing_method is not None):
+    # See missing.py to read explanations regarding the functions, inputs and outputs.
+        print("\n")
+        print("############################ Handling Missing Values: START ")
+        print("\n")
+    
+        if missing_method == 'row_removal':
+            df = row_removal(df)
+        if missing_method == 'column_removal':
+            df = column_removal(df)
+        if missing_method == 'stats_imputation_mean':
+            df = stats_imputation_mean(df)
+        if missing_method == 'stats_imputation_median':
+            df = stats_imputation_median(df)
+        if missing_method == 'stats_imputation_mode':
+            df = stats_imputation_mode(df)
+        if missing_method == 'linear_interpolation':
+            df = linear_interpolation(df)
+        if missing_method == 'mice':
+            df = mice(df)
+        if missing_method == 'knn':
+            df = knn(df)
+        
+        print("\n")
+        print("Printing data after handling missing values")
+        print("\n")
+        print(df)
+        print("\n")
+        print("############################ Handling Missing Values: END ")
+        print("\n")
+
+    else:
+        print("No missing values method selected")
+        missing_method = 'None'
+        print("\n")
+            
+    print("\n")
+    print("############################ Time Series Transformation: START ")
+    print("\n")
             
     if(test_time_size is not None):
             print("Time series data\n")
@@ -310,75 +350,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
     
     else:
         print("No Categorical Features Transformation Selected \n")
-
-# Handling missing values
-
-    if(missing_method is not None):
-    # See missing.py to read explanations regarding the functions, inputs and outputs.
-        print("\n")
-        print("############################ Handling Missing Values: START ")
-        print("\n")
-    
-        if missing_method == 'row_removal':
-            X = row_removal(X)
-            X_train = row_removal(X_train)
-            X_test = row_removal(X_test)
-        if missing_method == 'column_removal':
-            X = column_removal(X)
-            X_train = column_removal(X_train)
-            X_test = column_removal(X_test)
-        if missing_method == 'stats_imputation_mean':
-            X = stats_imputation_mean(X)
-            X_train = stats_imputation_mean(X_train)
-            X_test = stats_imputation_mean(X_test)
-        if missing_method == 'stats_imputation_median':
-            X = stats_imputation_median(X)
-            X_train = stats_imputation_median(X_train)
-            X_test = stats_imputation_median(X_test)
-        if missing_method == 'stats_imputation_mode':
-            X = stats_imputation_mode(X)
-            X_train = stats_imputation_mode(X_train)
-            X_test = stats_imputation_mode(X_test)
-        if missing_method == 'linear_interpolation':
-            X = linear_interpolation(X)
-            X_train = linear_interpolation(X_train)
-            X_test = linear_interpolation(X_test)
-        if missing_method == 'mice':
-            X = mice(X)
-            X_train = mice(X_train)
-            X_test = mice(X_test)
-        if missing_method == 'knn':
-            X = knn(X)
-            X_train = knn(X_train)
-            X_test = knn(X_test)
-        print("\n")
-        print("Printing data after handling missing values: X")
-        print("\n")
-        print(X)
-        print("\n")
-        
-        print("Printing data after handling missing values: X_train")
-        print("\n")
-        print(X_train)
-        print("\n")
-        
-        print("Printing data after handling missing values: X_test")
-        print("\n")
-        print(X_test)
-        print("\n")
-        
-        print("############################ Handling Missing Values: END ")
-        print("\n")
-
-    else:
-        print("No missing values method selected")
-        missing_method = 'None'
-        print("\n")
-            
-    print("\n")
-    print("############################ Time Series Transformation: START ")
-    print("\n")
-    
+                        
     if(rescaling is not None):
         # See feature_scaling.py to read explanations regarding the functions, inputs and outputs.
         # In the following lines, X_train and X_test are rescaled separately.
@@ -498,7 +470,6 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
     else:
         print("No Rescaling method selected")
         scaling_method = 'None'
-        
         
     if(features_extraction is not None):
     # See feature_extraction.py to read explanations regarding the functions, inputs and outputs.

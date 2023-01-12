@@ -369,3 +369,53 @@ def SMSSpamCollection():
     df = pd.read_csv('../data/datasets/SMSSpamCollection', sep='\t', names= ['label', 'message'])
 
     return df
+    
+# e-type.csv
+def etype():
+    """
+    
+    e-type.csv is electrophysiological features of individual mouse cells that are accessible as part of the Allen Cell Types Database (http://celltypes.brain-map.org/), including an interactive website as well as the opportunity to download data files. At the time of writing, 1,868 had electrophysiological data on the website.
+
+
+    """
+
+    # load data: Capture the dataset in Python using Pandas DataFrame
+    etype = './data/datasets/e-type.csv'
+    df = pd.read_csv(etype, delimiter=';')
+    # Rename "diagnosis" feature to "Target"
+    df = df.rename(columns={"e-type": "Target"})
+    return df
+
+# m-type.csv
+def mtype():
+    """
+    
+    m-type.csv is mouse neuron morphology reconstruction that are accessible as part of the Allen Cell Types Database (http://celltypes.brain-map.org/), including an interactive website as well as the opportunity to download data files. At the time of writing, 458 reconstructions were on the website.
+
+
+    """
+
+    # load data: Capture the dataset in Python using Pandas DataFrame
+    mtype = './data/datasets/m-type.csv'
+    df = pd.read_csv(mtype, delimiter=';')
+    # Rename "diagnosis" feature to "Target"
+    df = df.rename(columns={"m-type": "Target"})
+
+    return df
+
+# me-type.csv
+def metype():
+    """
+    
+    me-type.csv is mouse neuron electrophysiological and morphology reconstruction data that are accessible as part of the Allen Cell Types Database (http://celltypes.brain-map.org/), including an interactive website as well as the opportunity to download data files. At the time of writing, 1,868 had electrophysiological data on the website, and 458 reconstructions were on the website. The remainder will be published in the next scheduled data release.
+
+
+    """
+
+    # load data: Capture the dataset in Python using Pandas DataFrame
+    metype = './data/datasets/m-type.csv'
+    df = pd.read_csv(metype, delimiter=';')
+    # Rename "diagnosis" feature to "Target"
+    df = df.rename(columns={"me-type": "Target"})
+
+    return df

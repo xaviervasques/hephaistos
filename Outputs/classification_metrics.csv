@@ -1,10 +1,1 @@
-,SVM_rbf
-Rescaling Method,Quantile-Uniform
-Missing Method,None
-Extraction Method,None
-Accuracy,0.5
-Precision,0.5
-Recall,0.5
-F1 Score,0.5
-Cross-validation mean,0.7214285714285715
-Cross-validation std,0.01428571428571428
+""

@@ -105,7 +105,6 @@ def one_hot_encoding(feature_to_encode_2, X, y, X_train, y_train, X_test, y_test
     The drawback of this method is the size of the variable in memory since it uses as many bits as there are states meaning that the necessary memory space increases linearly with the
     number of states. Creating many columns can slow down the learning significantly.
 
-    feature_to_encode_2 are the features selected in inputs.py to encode
     X, y, X_train, y_train, X_test, y_test: the dataset
 
     """
@@ -139,7 +138,6 @@ def label_encoding(feature_to_encode_3, X, y, X_train, y_train, X_test, y_test):
     categories, we will use 0, 1, 2, 3, and 4. This approach can bring a major issue because even if there is no relation or order between categories, the algorithm might interpret
     some order or relationship.
 
-    feature_to_encode_3 are the features selected in inputs.py to encode
     X, y, X_train, y_train, X_test, y_test: the dataset
 
     """
@@ -589,11 +587,11 @@ def categorical_encoders(df, y, encoder, feature_to_encode, n_components, hash_m
             exit()
         
     if encoder == "label":
-        try:
-            df[feature_to_encode] = labelencoding(df[feature_to_encode])
-        except:
-            print("Something went wrong with Label Encoder: Please Check")
-            exit()
+        #try:
+        df[feature_to_encode] = labelencoding(df[feature_to_encode])
+        #except:
+        #    print("Something went wrong with Label Encoder: Please Check")
+        #    exit()
             
     if encoder == "helmert":
         try:
