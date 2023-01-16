@@ -469,7 +469,7 @@ This gives the following metrics at the end:
    algorithm (q_kernel_zz_pegasos)
    * Algorithms we can select: q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default_pegasos, 
    q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos
-   * Neural Networks are also available: q_circuitqnn, q_twolayerqnn, q_vqc
+   * Neural Networks are also available: q_samplerqnn, q_estimatorqnn, q_vqc
    * We also use q_kernel_training. It is also possible to train a quantum kernel with Quantum Kernel Alignment (QKA) that iteratively adapts a 
    parametrized quantum kernel to a dataset and converging to the maximum SVM margin at the same time. To implement it, we prepare the dataset as usual 
    and define the quantum feature map. Then, we will use QuantumKernelTrained.fit method to train the kernel parameters and pass it to a machine learning 
