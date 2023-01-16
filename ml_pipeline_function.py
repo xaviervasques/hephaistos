@@ -55,7 +55,7 @@ from classification.classification_cpu import svm_linear, svm_rbf, svm_sigmoid, 
 from classification.classification_gpu import gpu_logistic_regression, gpu_mlp, gpu_rnn, conv2d
 from regression.regression_cpu import linear_regression, svr_linear, svr_rbf, svr_sigmoid, svr_poly, mlp_regression, mlp_auto_regression
 from regression.regression_gpu import gpu_linear_regression, gpu_mlp_regression, gpu_rnn_regression
-from classification.classification_qpu import q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_zz, q_kernel_default_pegasos, q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos, q_kernel_training, q_twolayerqnn, q_circuitqnn, q_vqc
+from classification.classification_qpu import q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_zz, q_kernel_default_pegasos, q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos, q_kernel_training, q_estimatorqnn, q_samplerqnn, q_vqc
 
 
 def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_test=None, y_test=None, output_folder = None, missing_method = None, test_size = None, test_time_size = None, time_split = None, time_feature_name = None, time_format = None, time_transformation = None, lagged_features = None, number_of_lags = None, lag_aggregation = None, rolling_features = None, window_size = None, expending_features = None, expending_window_size = None, categorical = None, features_ordinal = None, features_one_hot = None, features_label = None, features_helmert = None, features_binary = None, features_frequency = None, features_mean = None, features_sum = None, features_weight = None, features_proba_ratio = None, features_hashing = None, features_backward = None, features_leave_one_out = None, features_james_stein = None, features_m = None, rescaling = None, features_extraction = None, number_components = None, n_neighbors = None, feature_selection = None, k_features = None, features_to_variance = None, var_threshold = None, cc_features = None, cc_target = None, wrapper_classifier = None, min_features = None, max_features = None, lasso_alpha = None, ml_penalty = None, classification_algorithms = None, regression_algorithms = None, n_estimators_forest = None, n_estimators_extra = None, cv = None, activation = None, optimizer = None, epochs = None, learning_rate = None, quantum_algorithms = None, feature_dimension = None, reps = None, ibm_account = None, quantum_backend = None, C= None, num_steps= None, max_iter = None, hidden_layer_sizes = None, mlp_activation = None, solver = None, alpha = None, mlp_learning_rate = None, learning_rate_init = None, gpu_logistic_optimizer = None, gpu_logistic_epochs = None, gpu_logistic_loss = None, gpu_mlp_optimizer = None, gpu_mlp_epochs= None, gpu_mlp_loss= None, gpu_mlp_activation = None, max_iter_r = None, hidden_layer_sizes_r = None, mlp_activation_r = None, solver_r = None, alpha_r = None, mlp_learning_rate_r = None, learning_rate_init_r = None, gpu_mlp_epochs_r = None, gpu_mlp_activation_r = None, rnn_units = None, rnn_activation = None, rnn_optimizer = None, rnn_loss = None, rnn_epochs = None, convolutional = None, conv_activation=None, conv_kernel_size=None, conv_optimizer=None, conv_loss=None, conv_epochs=None, multiclass = None):
@@ -1640,39 +1640,40 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             quantum_results = pd.concat([quantum_results, q_kernel_12_pegasos_output], axis=1, join='outer')
             
         """
-        q_twolayerqnn
+        q_estimatorqnn
         """
         
-        # q_twolayerqnn
-        if 'q_twolayerqnn' in quantum_algorithms:
+        # q_estimatorqnn
+        if 'q_estimatorqnn' in quantum_algorithms:
             print("\n")
-            print("q_twolayerqnn: OK \n")
-            new_row_scaling = {'q_twolayerqnn':["%s"%scaling_method]}
-            new_row_missing = {'q_twolayerqnn':["%s"%missing_method]}
-            new_row_extraction = {'q_twolayerqnn':["%s"%extraction_method]}
-            df_technique = pd.DataFrame(new_row_scaling, columns=['q_twolayerqnn'], index=["Rescaling Method"])
-            df_missing = pd.DataFrame(new_row_missing, columns=['q_twolayerqnn'], index=["Missing Method"])
-            df_extraction = pd.DataFrame(new_row_extraction, columns=['q_twolayerqnn'], index=["Extraction Method"])
-            feature_dimension = X_train.shape[1] # Number of features
-            df_results = q_twolayerqnn(X, X_train, X_test, y, y_train, y_test, feature_dimension, reps, ibm_account, quantum_backend, cv, output_folder)
-            q_twolayerqnn_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
-            quantum_results = pd.concat([quantum_results, q_twolayerqnn_output], axis=1, join='outer')
-            
-        # q_circuitqnn
-        if 'q_circuitqnn' in quantum_algorithms:
-            print("\n")
-            print("q_circuitqnn: OK \n")
-            new_row_scaling = {'q_circuitqnn':["%s"%scaling_method]}
-            new_row_missing = {'q_circuitqnn':["%s"%missing_method]}
-            new_row_extraction = {'q_circuitqnn':["%s"%extraction_method]}
-            df_technique = pd.DataFrame(new_row_scaling, columns=['q_circuitqnn'], index=["Rescaling Method"])
-            df_missing = pd.DataFrame(new_row_missing, columns=['q_circuitqnn'], index=["Missing Method"])
-            df_extraction = pd.DataFrame(new_row_extraction, columns=['q_circuitqnn'], index=["Extraction Method"])
+            print("q_estimatorqnn: OK \n")
+            new_row_scaling = {'q_estimatorqnn':["%s"%scaling_method]}
+            new_row_missing = {'q_estimatorqnn':["%s"%missing_method]}
+            new_row_extraction = {'q_estimatorqnn':["%s"%extraction_method]}
+            df_technique = pd.DataFrame(new_row_scaling, columns=['q_estimatorqnn'], index=["Rescaling Method"])
+            df_missing = pd.DataFrame(new_row_missing, columns=['q_estimatorqnn'], index=["Missing Method"])
+            df_extraction = pd.DataFrame(new_row_extraction, columns=['q_estimatorqnn'], index=["Extraction Method"])
             number_classes = len(df.groupby('Target').size().index) # Number of classes
             feature_dimension = X_train.shape[1] # Number of features
-            df_results = q_circuitqnn(X, X_train, X_test, y, y_train, y_test, number_classes, feature_dimension, reps, ibm_account, quantum_backend, cv, output_folder)
-            q_circuitqnn_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
-            quantum_results = pd.concat([quantum_results, q_circuitqnn_output], axis=1, join='outer')
+            df_results = q_estimatorqnn(X, X_train, X_test, y, y_train, y_test, number_classes, feature_dimension, reps, ibm_account, quantum_backend, cv, output_folder)
+            q_estimatorqnn_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
+            quantum_results = pd.concat([quantum_results, q_estimatorqnn_output], axis=1, join='outer')
+            
+        # q_samplerqnn
+        if 'q_samplerqnn' in quantum_algorithms:
+            print("\n")
+            print("q_samplerqnn: OK \n")
+            new_row_scaling = {'q_samplerqnn':["%s"%scaling_method]}
+            new_row_missing = {'q_samplerqnn':["%s"%missing_method]}
+            new_row_extraction = {'q_samplerqnn':["%s"%extraction_method]}
+            df_technique = pd.DataFrame(new_row_scaling, columns=['q_samplerqnn'], index=["Rescaling Method"])
+            df_missing = pd.DataFrame(new_row_missing, columns=['q_samplerqnn'], index=["Missing Method"])
+            df_extraction = pd.DataFrame(new_row_extraction, columns=['q_samplerqnn'], index=["Extraction Method"])
+            number_classes = len(df.groupby('Target').size().index) # Number of classes
+            feature_dimension = X_train.shape[1] # Number of features
+            df_results = q_samplerqnn(X, X_train, X_test, y, y_train, y_test, number_classes, feature_dimension, reps, ibm_account, quantum_backend, cv, output_folder)
+            q_samplerqnn_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
+            quantum_results = pd.concat([quantum_results, q_samplerqnn_output], axis=1, join='outer')
                 
         # q_vqc
         if 'q_vqc' in quantum_algorithms:

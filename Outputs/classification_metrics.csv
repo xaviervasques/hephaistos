@@ -1,1 +1,10 @@
-""
+,mlp_neural_network_auto
+Rescaling Method,Yeo-Johnson
+Missing Method,knn
+Extraction Method,None
+Accuracy,0.7688172043010753
+Precision,0.7688172043010753
+Recall,0.7688172043010753
+F1 Score,0.7688172043010751
+Cross-validation mean,0.7616161616161616
+Cross-validation std,0.017739986360026244

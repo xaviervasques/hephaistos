@@ -54,25 +54,30 @@ from qiskit.algorithms.optimizers import SPSA
 from qiskit.opflow import Z, I, StateFn
 from qiskit.circuit import Parameter
 
-from qiskit_machine_learning.neural_networks import TwoLayerQNN, CircuitQNN
 from qiskit_machine_learning.algorithms.classifiers import NeuralNetworkClassifier, VQC
+from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
+
 
 from typing import Union
 from qiskit_machine_learning.exceptions import QiskitMachineLearningError
 
+"""
 
+Quantum Algotihms for Classification.
+    Part 1: Quantum Kernel Algorithms for Classification
+    Part 2: Quantum Neural Networks for Classification
 
 """
-Quantum Algotihms for classification.
+
+"""
+
+Part 1: Quantum Kernel Algorithms for classification
 
 We use the encoding function from Havlíček et al. (q_kernel_zz) and five encoding functions presented by Suzuki et al. (q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default) and apply SVC from scikit-learn.
 
 We also use the encoding function from Havlíček et al. (q_kernel_default_pegasos) and five encoding functions presented by Suzuki et al. (q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos) and apply Pegasos algorithm from Shalev-Shwartz.
 
-We can also set up the QuantumKernel class to calculate a kernel matrix using the ZZFeatureMap (q_kernel_zz) with SVC from scikit-learn or pegasos algorithm (q_kernel_zz_pegasos)
-
 Algorithms: q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default_pegasos, q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos, q_kernel_training
-
 
 Inputs:
     X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation.
@@ -81,7 +86,9 @@ Inputs:
     cv: number of k-folds for cross-validation
     feature_dimension = dimensionality of the data which equal to the number of required qubits,
     reps= number of times the feature map circuit is repeated,
-    ibm_account = None,
+    ibm_account = IBM account (API)
+    multiclass = OneVsRestClassifier or OneVsOneClassifier or svc
+    output_folder: path where we want to save our outputs
     quantum_backend (different if premium access):
         ibmq_qasm_simulator
         ibmq_armonk
@@ -109,7 +116,6 @@ Inputs:
             cross_val_score: Cross-validation score
 
 """
-
 
 def q_kernel_zz(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
    
@@ -268,6 +274,196 @@ def q_kernel_zz(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = 
     print(classification_report(y_test,y_pred))
         
     return metrics_dataframe
+
+def q_kernel_training(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
+ 
+    # We convert pandas DataFrame into numpy array
+    X_train = X_train.to_numpy()
+    X_test = X_test.to_numpy()
+
+    # seed for randomization, to keep outputs consistent
+    seed = 123456
+    algorithm_globals.random_seed = seed
+
+    # normalize the data between 0 and 2pi
+    X_train -= X_train.min(0)
+    X_train /= X_train.max(0)
+    X_train *= 2*np.pi
+
+    # normalize the data between 0 and 2pi
+    X_test -= X_test.min(0)
+    X_test /= X_test.max(0)
+    X_test *= 2*np.pi
+    
+    # Number of parameters equal to number of features
+    num_params = feature_dimension
+
+    # Create vector containing number of trainable parameters
+    user_params = ParameterVector('θ', num_params)
+        
+    # Create circuit for num_features qbit system
+    fm0 = QuantumCircuit(feature_dimension)
+
+    # First feature map component comprises a Y rotation with parameter theta on both qubit regs
+    for qubit in range(feature_dimension):
+        fm0.ry(user_params[(qubit%num_params)], qubit)
+    
+    # Use ZZFeatureMap to represent input data
+    fm1 = ZZFeatureMap(feature_dimension=feature_dimension)
+
+    # Compose both maps to create one feature map circuit
+    feature_map = fm0.compose(fm1)
+    
+    if 'ibmq_qasm_simulator' in quantum_backend:
+        # Use of simulator
+        # The use of these requires us to sign with an IBMQ account.
+        # Assuming the credentials are already loaded onto your computer, you sign in with
+        IBMQ.save_account(ibm_account, overwrite=True)
+        IBMQ.load_account()
+        provider = IBMQ.get_provider(hub='ibm-q')
+        # What additional backends we have available.
+        for backend in provider.backends():
+            print(backend)
+        
+        qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+        
+    else:
+        if 'statevector_simulator' in quantum_backend:
+            # Use of a simulator
+            # The use of these requires us to sign with an IBMQ account.
+            # Assuming the credentials are already loaded onto your computer, you sign in with
+            IBMQ.save_account(ibm_account, overwrite=True)
+            IBMQ.load_account()
+            provider = IBMQ.get_provider(hub='ibm-q')
+            # What additional backends we have available.
+            for backend in provider.backends():
+                print(backend)
+            
+            qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+
+        else:
+            if 'least_busy' in quantum_backend:
+                # Use of the least busy quantum hardware
+                # The use of these requires us to sign with an IBMQ account.
+                # Assuming the credentials are already loaded onto your computer, you sign in with
+                IBMQ.save_account(ibm_account, overwrite=True)
+                IBMQ.load_account()
+                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
+                # What additional backends we have available.
+                for backend in provider.backends():
+                    print(backend)
+                
+                device = least_busy(provider.backends(
+                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than 5 qubits
+                        and not x.configuration().simulator                                 # Not a simulator
+                        and x.status().operational == True                                  # Operational backend
+                        )
+                    )
+                                # Use of a real quantum computer
+                print("Available device: ", device)
+                quantum_backend = "%s"%device
+                
+                backend = provider.get_backend(quantum_backend)
+                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
+                qcomp_backend = QuantumInstance(backend, shots=1024)
+
+
+            else:
+                # Use of a real quantum computer
+                # The use of these requires us to sign with an IBMQ account.
+                # Assuming the credentials are already loaded onto your computer, you sign in with
+                IBMQ.save_account(ibm_account, overwrite=True)
+                IBMQ.load_account()
+                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
+                # What additional backends we have available.
+                for backend in provider.backends():
+                    print(backend)
+                    
+                backend = provider.get_backend(quantum_backend)
+                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
+                qcomp_backend = QuantumInstance(backend, shots=1024)
+        
+    # Instantiate quantum kernel
+    quant_kernel = QuantumKernel(feature_map, user_parameters=user_params, quantum_instance=qcomp_backend)
+
+    # Set up model optimizer
+    spsa_opt = SPSA(maxiter=10, learning_rate=0.05, perturbation=0.05)
+
+    from qiskit_machine_learning.utils.loss_functions import SVCLoss
+    loss_func = SVCLoss(C=1.0)
+    print("Initiate a quantum kernel trainer")
+    qkt = QuantumKernelTrainer(quantum_kernel=quant_kernel, loss=loss_func, optimizer=spsa_opt, initial_point=[np.pi/2 for i in range(len(user_params))])
+    
+    # Instantiate a quantum kernel trainer
+    #qkt = QuantumKernelTrainer(
+    #quantum_kernel=quant_kernel, loss="svc_loss", optimizer=spsa_opt, initial_point=[np.pi/2 for i in range(len(user_params))])
+          
+    # Use QuantumKernelTrainer object to fit model to training data
+    print("QuantumKernelTrainer object to fit model to training data")
+    qka_results = qkt.fit(X_train, y_train)
+    optimized_kernel = qka_results.quantum_kernel
+
+    # Use QSVC for classification
+    model = QSVC(quantum_kernel=optimized_kernel)
+
+    # Fit the QSVC
+    model.fit(X_train, y_train)
+
+    # Predict the labels
+    y_pred = model.predict(X_test)
+    
+    if output_folder is not None:
+        if multiclass is None:
+            model.save(output_folder+"test.model")
+        
+    # Evalaute the test accuracy
+    accuracy_test = metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_pred)
+    print(f"accuracy test: {accuracy_test}")
+
+    # Print predicted values and real values of the X_test dataset
+    print("\n")
+    print("Print predicted data coming from X_test as new input data")
+    print(y_pred)
+    print("\n")
+    print("Print real values\n")
+    print(y_test)
+    print("\n")
+    
+    # K-Fold Cross Validation
+    from sklearn.model_selection import KFold
+    k_fold = KFold(n_splits=cv)
+    score = np.zeros(cv)
+    i = 0
+    print(score)
+    for indices_train, indices_test in k_fold.split(X_train):
+        #print(indices_train, indices_test)
+        X_train_ = X_train[indices_train]
+        X_test_ = X_train[indices_test]
+        y_train_ = y_train[indices_train]
+        y_test_ = y_train[indices_test]
+ 
+        # fit classifier to data
+        model.fit(X_train_, y_train_)
+
+        # score classifier
+        score[i] = model.score(X_test_, y_test_)
+        i = i + 1
+
+    import math
+    print("cross validation scores: ", score)
+    cross_mean = sum(score) / len(score)
+    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
+    cross_std  = math.sqrt(cross_var)  # standard deviation
+    print("cross validation mean: ", cross_mean)
+    
+    results = [metrics.accuracy_score(y_test, y_pred),metrics.precision_score(y_test, y_pred, average='micro'),metrics.recall_score(y_test, y_pred, average='micro'),metrics.f1_score(y_test, y_pred, average='micro'), cross_mean, cross_std]
+    
+    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_kernel_training'])
+    print('Classification Report: \n')
+    print(classification_report(y_test,y_pred))
+            
+    return metrics_dataframe
+    
 
 
 def q_kernel_default(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
@@ -1696,441 +1892,58 @@ def q_kernel_12_pegasos(X, X_train, X_test, y, y_train, y_test, cv, feature_dime
     print(classification_report(y_test,y_pred))
         
     return metrics_dataframe
-    
+
+"""
+Part 2: Quantum Neural Networks
+
+Here we will use the NeuralNetworkClassifier from qiskit (The tutorials can be found in https://quantum-computing.ibm.com):
+    - Variational Quantum Classifier (VQC)
+    - Classification with an EstimatorQNN
+    - Classification with a SamplerQNN
 
 
-def q_twolayerqnn(X, X_train, X_test, y, y_train, y_test, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, cv = None, output_folder = None):
+Inputs:
+    X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation.
+    X_train, y_train selected dataset to train the model separated by features (X_train) and labels (y_train)
+    X_test, y_test: selected dataset to test the model speparated by features (X_test) and labels (y_test)
+    cv: number of k-folds for cross-validation
+    feature_dimension = dimensionality of the data which equal to the number of required qubits,
+    reps= number of times the feature map circuit is repeated,
+    ibm_account = "YOUR API"
+    output_folder: the path where we want to save our results
+    quantum_backend (different if premium access):
+        ibmq_qasm_simulator
+        ibmq_armonk
+        ibmq_santiago
+        ibmq_bogota
+        ibmq_lima
+        ibmq_belem
+        ibmq_quito
+        simulator_statevector
+        simulator_mps
+        simulator_extended_stabilizer
+        simulator_stabilizer
+        ibmq_manila
 
-    X_train = X_train.to_numpy() # Convert pandas DataFrame into numpy array
-    y_train = pd.DataFrame(data = y_train, columns = ['Target'])
-    y_train = y_train['Target'].replace(0, -1).to_numpy() # We replace our labels by 1 and -1 and convert pandas DataFrame into numpy array
+    Output:
+        A DataFrame with the following metrics:
+            accuracy_score: It is calculated as the ratio of the number of correct predictions to all number predictions made by the classifiers.
+            precision_score: Precision is the number of correct outputs or how many of the correctly predicted cases turned out to be positive.
+            recall_score: Recall defines how many of the actual positive cases we were able to predict correctly.
+            f1_score: It is a harmonic mean of precision and recall.
+            cross_val_score: Cross-validation score
 
-    X_test = X_test.to_numpy() # Convert pandas DataFrame into numpy array
-    y_test = pd.DataFrame(data = y_test, columns = ['Target'])
-    y_test = y_test['Target'].replace(0, -1).to_numpy() # We replace our labels by 1 and -1 and convert pandas DataFrame into numpy array
-            
-    # seed for randomization, to keep outputs consistent
-    seed = 123456
-    algorithm_globals.random_seed = seed
-    
-    number_inputs = feature_dimension
-        
-    # callback function that draws a live plot when the .fit() method is called
-    def callback_graph(weights, obj_func_eval):
-        objective_func_vals.append(obj_func_eval)
-    
-    if 'ibmq_qasm_simulator' in quantum_backend:
-        # Use of a simulator
-        # The use of these requires us to sign with an IBMQ account.
-        # Assuming the credentials are already loaded onto your computer, you sign in with
-        IBMQ.save_account(ibm_account, overwrite=True)
-        IBMQ.load_account()
-        provider = IBMQ.get_provider(hub='ibm-q')
-        # What additional backends we have available.
-        for backend in provider.backends():
-            print(backend)
-            
-        # Define a quantum instance
-        quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-        
-        # Build our QNN
-        opflow_qnn = TwoLayerQNN(number_inputs, quantum_instance=quantum_instance)
+"""
 
-        # QNN maps inputs to [-1, +1]
-        opflow_qnn.forward(X_train[0, :], algorithm_globals.random.random(opflow_qnn.num_weights))
-
-    else:
-        if 'statevector_simulator' in quantum_backend:
-            # Use of a simulator
-            
-            # Backend objects can also be set up using the IBMQ package.
-            # The use of these requires us to sign with an IBMQ account.
-            # Assuming the credentials are already loaded onto your computer, you sign in with
-            IBMQ.save_account(ibm_account, overwrite=True)
-            IBMQ.load_account()
-            provider = IBMQ.get_provider(hub='ibm-q')
-            # What additional backends we have available.
-            for backend in provider.backends():
-                print(backend)
-
-            # Define a quantum instance
-            quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-                        
-            # Build our QNN
-            opflow_qnn = TwoLayerQNN(number_inputs, quantum_instance=quantum_instance)
-
-            # QNN maps inputs to [-1, +1]
-            opflow_qnn.forward(X_train[0, :], algorithm_globals.random.random(opflow_qnn.num_weights))
-        
-        else:
-            if 'least_busy' in quantum_backend:
-                # Use the least busy quantum hardware
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                
-                device = least_busy(provider.backends(
-                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than feature_dimension qubits
-                        and not x.configuration().simulator                                 # Not a simulator
-                        and x.status().operational == True                                  # Operational backend
-                        )
-                    )
-                                
-                print("Available device: ", device)
-                quantum_backend = "%s"%device
-                
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                
-                # Define a quantum instance
-                quantum_instance = QuantumInstance(backend, shots=1024)
-                        
-                # Build our QNN
-                opflow_qnn = TwoLayerQNN(number_inputs, quantum_instance=quantum_instance)
-
-                # QNN maps inputs to [-1, +1]
-                opflow_qnn.forward(X_train[0, :], algorithm_globals.random.random(opflow_qnn.num_weights))
-
-            else:
-                # Use of a real quantum computer
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                    
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                
-                # Define a quantum instance
-                quantum_instance = QuantumInstance(backend, shots=1024)
-                        
-                # Build our QNN
-                opflow_qnn = TwoLayerQNN(number_inputs, quantum_instance=quantum_instance)
-
-                # QNN maps inputs to [-1, +1]
-                opflow_qnn.forward(X_train[0, :], algorithm_globals.random.random(opflow_qnn.num_weights))
-    
-    # Create the neural network classifier
-    opflow_classifier = NeuralNetworkClassifier(opflow_qnn, optimizer=COBYLA(), callback=callback_graph)
-
-    # create empty array for callback to store evaluations of the objective function
-    objective_func_vals = []
-    
-    # fit classifier to data
-    opflow_classifier.fit(X_train, y_train)
-
-    # score classifier
-    opflow_classifier.score(X_test, y_test)
-
-    # evaluate data points
-    y_predict = opflow_classifier.predict(X_test)
-    
-    if output_folder is not None:
-        opflow_classifier.save(output_folder+"opflow_classifier.model")
-
-    from sklearn import metrics
-    from sklearn.metrics import classification_report
-
-    # Print predicted values and real values of the X_test dataset
-    print("\n")
-    print("Print predicted data coming from X_test as new input data")
-    print(y_predict)
-    print("\n")
-    print("Print real values\n")
-    print(y_test)
-    print("\n")
-
-    # K-Fold Cross Validation
-    from sklearn.model_selection import KFold
-    k_fold = KFold(n_splits=cv)
-    score = np.zeros(cv)
-    i = 0
-    print(score)
-    for indices_train, indices_test in k_fold.split(X_train):
-        #print(indices_train, indices_test)
-        X_train_ = X_train[indices_train]
-        X_test_ = X_train[indices_test]
-        y_train_ = y_train[indices_train]
-        y_test_ = y_train[indices_test]
-        
-        # fit classifier to data
-        opflow_classifier.fit(X_train_, y_train_)
-
-        # score classifier
-        score[i] = opflow_classifier.score(X_test_, y_test_)
-        i = i + 1
-
-    import math
-    print("cross validation scores: ", score)
-    cross_mean = sum(score) / len(score)
-    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
-    cross_std  = math.sqrt(cross_var)  # standard deviation
-    
-    # Print accuracy metrics of the model
-    results = [metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_predict),metrics.precision_score(y_test, y_predict, average='micro'),metrics.recall_score(y_test, y_predict, average='micro'),metrics.f1_score(y_test, y_predict, average='micro'), cross_mean, cross_std]
-    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_twolayerqnn'])
-    print('Classification Report: \n')
-    print(classification_report(y_test,y_predict))
-            
-    return metrics_dataframe
-
-
-def q_circuitqnn(X, X_train, X_test, y, y_train, y_test,  number_classes = None, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, cv = None, output_folder = None):
-
-    # We convert pandas DataFrame into numpy array
-    X_train = X_train.to_numpy()
-    X_test = X_test.to_numpy()
-    
-    # seed for randomization, to keep outputs consistent
-    seed = 123456
-    algorithm_globals.random_seed = seed
-    
-    number_inputs = feature_dimension # Number of qubits
-    output_shape = number_classes  # corresponds to the number of classes
-    
-    # callback function that draws a live plot when the .fit() method is called
-    def callback_graph(weights, obj_func_eval):
-        objective_func_vals.append(obj_func_eval)
-        
-    if 'ibmq_qasm_simulator' in quantum_backend:
-        # Use of simulator
-        
-        # The use of these requires us to sign with an IBMQ account.
-        # Assuming the credentials are already loaded onto your computer, you sign in with
-        IBMQ.save_account(ibm_account, overwrite=True)
-        IBMQ.load_account()
-        provider = IBMQ.get_provider(hub='ibm-q')
-        # What additional backends we have available.
-        for backend in provider.backends():
-            print(backend)
-            
-        # Define a quantum instance
-        quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-        
-        # construct feature map
-        feature_map = ZZFeatureMap(number_inputs)
-
-        # construct ansatz
-        ansatz = RealAmplitudes(number_inputs, reps=reps)
-
-        # construct quantum circuit
-        qc = QuantumCircuit(number_inputs)
-        qc.append(feature_map, range(number_inputs))
-        qc.append(ansatz, range(number_inputs))
-        qc.decompose().draw()
-            
-        # Build QNN
-        circuit_qnn = CircuitQNN(
-            circuit=qc,
-            input_params=feature_map.parameters,
-            weight_params=ansatz.parameters,
-            output_shape=output_shape,
-            quantum_instance=quantum_instance,
-        )
-
-    else:
-        if 'statevector_simulator' in quantum_backend:
-            # Use of a simulator
-            
-            # The use of these requires us to sign with an IBMQ account.
-            # Assuming the credentials are already loaded onto your computer, you sign in with
-            IBMQ.save_account(ibm_account, overwrite=True)
-            IBMQ.load_account()
-            provider = IBMQ.get_provider(hub='ibm-q')
-            # What additional backends we have available.
-            for backend in provider.backends():
-                print(backend)
-
-            # Define a quantum instance
-            quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-                        
-            # construct feature map
-            feature_map = ZZFeatureMap(number_inputs)
-
-            # construct ansatz
-            ansatz = RealAmplitudes(number_inputs, reps=reps)
-
-            # construct quantum circuit
-            qc = QuantumCircuit(number_inputs)
-            qc.append(feature_map, range(number_inputs))
-            qc.append(ansatz, range(number_inputs))
-            qc.decompose().draw()
-            
-            # Build QNN
-            circuit_qnn = CircuitQNN(
-                circuit=qc,
-                input_params=feature_map.parameters,
-                weight_params=ansatz.parameters,
-                output_shape=output_shape,
-                quantum_instance=quantum_instance,
-            )
-        
-        else:
-            if 'least_busy' in quantum_backend:
-                # Use of the least busy real quantum computer
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                
-                device = least_busy(provider.backends(
-                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than feature_dimension qubits
-                        and not x.configuration().simulator                                 # Not a simulator
-                        and x.status().operational == True                                  # Operational backend
-                        )
-                    )
-                                # Use of a real quantum computer
-                print("Available device: ", device)
-                quantum_backend = "%s"%device
-                
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                
-                # Define a quantum instance
-                quantum_instance = QuantumInstance(backend, shots=1024)
-                        
-                # construct feature map
-                feature_map = ZZFeatureMap(number_inputs)
-
-                # construct ansatz
-                ansatz = RealAmplitudes(number_inputs, reps=reps)
-
-                # construct quantum circuit
-                qc = QuantumCircuit(number_inputs)
-                qc.append(feature_map, range(number_inputs))
-                qc.append(ansatz, range(number_inputs))
-                qc.decompose().draw()
-                
-                # Build QNN
-                circuit_qnn = CircuitQNN(
-                    circuit=qc,
-                    input_params=feature_map.parameters,
-                    weight_params=ansatz.parameters,
-            
-                    output_shape=output_shape,
-                    quantum_instance=quantum_instance,
-                )
-
-            else:
-                # Use of a real quantum computer
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                    
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                
-                # Define a quantum instance
-                quantum_instance = QuantumInstance(backend, shots=1024)
-
-                # construct feature map
-                feature_map = ZZFeatureMap(number_inputs)
-
-                # construct ansatz
-                ansatz = RealAmplitudes(number_inputs, reps=reps)
-
-                # construct quantum circuit
-                qc = QuantumCircuit(number_inputs)
-                qc.append(feature_map, range(number_inputs))
-                qc.append(ansatz, range(number_inputs))
-                qc.decompose().draw()
-                
-                # Build QNN
-                circuit_qnn = CircuitQNN(
-                    circuit=qc,
-                    input_params=feature_map.parameters,
-                    weight_params=ansatz.parameters,
-                    output_shape=output_shape,
-                    quantum_instance=quantum_instance,
-                )
-
-    # Create classifier
-    circuit_classifier = NeuralNetworkClassifier(neural_network=circuit_qnn, optimizer=COBYLA(), callback=callback_graph)
-
-    # create empty array for callback to store evaluations of the objective function
-    objective_func_vals = []
-    #plt.rcParams["figure.figsize"] = (12, 6)
-
-    # fit classifier to data
-    circuit_classifier.fit(X_train, y_train)
-
-    # return to default figsize
-    #plt.rcParams["figure.figsize"] = (6, 4)
-
-    # score classifier
-    circuit_classifier.score(X_test, y_test)
-
-    # Predict data points from X_test
-    y_predict = circuit_classifier.predict(X_test)
-
-    if output_folder is not None:
-        circuit_classifier.save(output_folder+"circuit_classifier.model")
-
-    from sklearn import metrics
-    from sklearn.metrics import classification_report
-
-    # Print predicted values and real values of the X_test dataset
-    print("\n")
-    print("Print predicted data coming from X_test as new input data")
-    print(y_predict)
-    print("\n")
-    print("Print real values\n")
-    print(y_test)
-    print("\n")
-
-    # K-Fold Cross Validation
-    from sklearn.model_selection import KFold
-    k_fold = KFold(n_splits=cv)
-    score = np.zeros(cv)
-    i = 0
-    print(score)
-    for indices_train, indices_test in k_fold.split(X_train):
-        #print(indices_train, indices_test)
-        X_train_ = X_train[indices_train]
-        X_test_ = X_train[indices_test]
-        y_train_ = y_train[indices_train]
-        y_test_ = y_train[indices_test]
-        
-        # fit classifier to data
-        circuit_classifier.fit(X_train_, y_train_)
-
-        # score classifier
-        score[i] = circuit_classifier.score(X_test_, y_test_)
-        i = i + 1
-
-    import math
-    print("cross validation scores: ", score)
-    cross_mean = sum(score) / len(score)
-    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
-    cross_std  = math.sqrt(cross_var)  # standard deviation
-    
-    # Print accuracy metrics of the model
-    results = [metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_predict),metrics.precision_score(y_test, y_predict, average='micro'),metrics.recall_score(y_test, y_predict, average='micro'),metrics.f1_score(y_test, y_predict, average='micro'), cross_mean, cross_std]
-    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_circuitqnn'])
-    print('Classification Report: \n')
-    print(classification_report(y_test,y_predict))
-            
-    return metrics_dataframe
-    
 # Classification with Variational Quantum Classifier (VQC)
+
+"""
+
+VQC is a variant of the NeuralNetworkClassifier with a SamplerQNN which applies a parity mapping or extensions.
+By default, VQC will apply CrossEntropyLoww function. The labels are given in one-hot encoded format. We use to_categorical from tensorflow.keras.utils. This will return predictions also in one-hot encoded format. Two important elements of VQC is the feature map and ansatz. Here, we will use the ZZFeatureMap which is a standard feature maps in the Qiskit circuit library.
+
+"""
+
 def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, cv = None, output_folder = None):
 
     # We convert pandas DataFrame into numpy array
@@ -2149,10 +1962,20 @@ def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, featur
     
     number_inputs = feature_dimension # Number of qubits
     output_shape = number_classes  # Number of classes of the dataset
-    
+        
     # Callback function that draws a live plot when the .fit() method is called
+    from matplotlib import pyplot as plt
+    
     def callback_graph(weights, obj_func_eval):
         objective_func_vals.append(obj_func_eval)
+        if output_folder is not None:
+            plt.title("Objective function value against iteration")
+            plt.xlabel("Iteration")
+            plt.ylabel("Objective function value")
+            plt.plot(range(len(objective_func_vals)), objective_func_vals)
+            plt.savefig(output_folder+'Objective_function_value_against_iteration.png')
+        else:
+            print("No output folder to save figure plotting objective function value against iteration")
         
     if 'ibmq_qasm_simulator' in quantum_backend:
         # The use of these requires us to sign with an IBMQ account.
@@ -2285,8 +2108,11 @@ def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, featur
     # Create empty array for callback to store evaluations of the objective function
     objective_func_vals = []
     
-    # fit classifier to data
+    # fit classifier to data and calculate elpased time
+    import time
+    start = time.time()
     vqc.fit(X_train, y_train)
+    elapsed = time.time() - start
 
     # score classifier
     vqc.score(X_test, y_test)
@@ -2347,173 +2173,41 @@ def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, featur
             
     return metrics_dataframe
 
+"""
 
-
-def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
+Here we will use EstimatorQNN for binary classification within a NeuralNetworkClassifier. The EstimatorQNN will return one-dimensional output in [−1,+1] from two classes that we assigned as {−1,+1}.
  
+"""
+
+def q_estimatorqnn(X, X_train, X_test, y, y_train, y_test,  number_classes = None, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, cv = None, output_folder = None):
+
     # We convert pandas DataFrame into numpy array
     X_train = X_train.to_numpy()
     X_test = X_test.to_numpy()
-
+    
     # seed for randomization, to keep outputs consistent
     seed = 123456
     algorithm_globals.random_seed = seed
-
-    # Define a callback class for our optimizer
-    class QKTCallback:
-        """Callback wrapper class."""
-
-        def __init__(self) -> None:
-            self._data = [[] for i in range(5)]
-
-        def callback(self, x0, x1=None, x2=None, x3=None, x4=None):
-            """
-            Args:
-                x0: number of function evaluations
-                x1: the parameters
-                x2: the function value
-                x3: the stepsize
-                x4: whether the step was accepted
-            """
-            self._data[0].append(x0)
-            self._data[1].append(x1)
-            self._data[2].append(x2)
-            self._data[3].append(x3)
-            self._data[4].append(x4)
-
-        def get_callback_data(self):
-            return self._data
-
-        def clear_callback_data(self):
-            self._data = [[] for i in range(5)]
-
-    # normalize the data between 0 and 2pi
-    X_train -= X_train.min(0)
-    X_train /= X_train.max(0)
-    X_train *= 2*np.pi
-
-    # normalize the data between 0 and 2pi
-    X_test -= X_test.min(0)
-    X_test /= X_test.max(0)
-    X_test *= 2*np.pi
     
-    if feature_dimension == 2:
-        # Create a rotational layer to train. We will rotate each qubit the same amount.
-        user_params = ParameterVector("θ", feature_dimension)
-        print("feature dimension : %i"%feature_dimension)
-        fm0 = QuantumCircuit(feature_dimension)
-        fm0.ry(user_params[0], 0)
-        fm0.ry(user_params[1], 1)
-    else:
-        if feature_dimension == 5:
-            # Create a rotational layer to train. We will rotate each qubit the same amount.
-            user_params = ParameterVector("θ", feature_dimension)
-            fm0 = QuantumCircuit(feature_dimension)
-            fm0.ry(user_params[0], 0)
-            fm0.ry(user_params[1], 1)
-            fm0.ry(user_params[2], 2)
-            fm0.ry(user_params[3], 3)
-            fm0.ry(user_params[4], 4)
+    number_inputs = feature_dimension # Number of qubits
+    #output_shape = number_classes  # corresponds to the number of classes
+    
+    # callback function that draws a live plot when the .fit() method is called
+    def callback_graph(weights, obj_func_eval):
+        objective_func_vals.append(obj_func_eval)
+        if output_folder is not None:
+            plt.title("Objective function value against iteration")
+            plt.xlabel("Iteration")
+            plt.ylabel("Objective function value")
+            plt.plot(range(len(objective_func_vals)), objective_func_vals)
+            plt.savefig(output_folder+'Objective_function_value_against_iteration.png')
         else:
-            if feature_dimension == 6:
-                # Create a rotational layer to train. We will rotate each qubit the same amount.
-                user_params = ParameterVector("θ", feature_dimension)
-                fm0 = QuantumCircuit(feature_dimension)
-                fm0.ry(user_params[0], 0)
-                fm0.ry(user_params[1], 1)
-                fm0.ry(user_params[2], 2)
-                fm0.ry(user_params[3], 3)
-                fm0.ry(user_params[4], 4)
-                fm0.ry(user_params[5], 5)
-            else:
-                if feature_dimension == 10:
-                    # Create a rotational layer to train. We will rotate each qubit the same amount.
-                    user_params = ParameterVector("θ", feature_dimension)
-                    fm0 = QuantumCircuit(feature_dimension)
-                    fm0.ry(user_params[0], 0)
-                    fm0.ry(user_params[1], 1)
-                    fm0.ry(user_params[2], 2)
-                    fm0.ry(user_params[3], 3)
-                    fm0.ry(user_params[4], 4)
-                    fm0.ry(user_params[5], 5)
-                    fm0.ry(user_params[6], 6)
-                    fm0.ry(user_params[7], 7)
-                    fm0.ry(user_params[8], 8)
-                    fm0.ry(user_params[9], 9)
-                else:
-                    if feature_dimension == 20:
-                        # Create a rotational layer to train. We will rotate each qubit the same amount.
-                        user_params = ParameterVector("θ", feature_dimension)
-                        fm0 = QuantumCircuit(feature_dimension)
-                        fm0.ry(user_params[0], 0)
-                        fm0.ry(user_params[1], 1)
-                        fm0.ry(user_params[2], 2)
-                        fm0.ry(user_params[3], 3)
-                        fm0.ry(user_params[4], 4)
-                        fm0.ry(user_params[5], 5)
-                        fm0.ry(user_params[6], 6)
-                        fm0.ry(user_params[7], 7)
-                        fm0.ry(user_params[8], 8)
-                        fm0.ry(user_params[9], 9)
-                        fm0.ry(user_params[10], 10)
-                        fm0.ry(user_params[11], 11)
-                        fm0.ry(user_params[12], 12)
-                        fm0.ry(user_params[13], 13)
-                        fm0.ry(user_params[14], 14)
-                        fm0.ry(user_params[15], 15)
-                        fm0.ry(user_params[16], 16)
-                        fm0.ry(user_params[17], 17)
-                        fm0.ry(user_params[18], 18)
-                        fm0.ry(user_params[19], 19)
-                    else:
-                        if feature_dimension == 32:
-                            # Create a rotational layer to train. We will rotate each qubit the same amount.
-                            user_params = ParameterVector("θ", feature_dimension)
-                            fm0 = QuantumCircuit(feature_dimension)
-                            fm0.ry(user_params[0], 0)
-                            fm0.ry(user_params[1], 1)
-                            fm0.ry(user_params[2], 2)
-                            fm0.ry(user_params[3], 3)
-                            fm0.ry(user_params[4], 4)
-                            fm0.ry(user_params[5], 5)
-                            fm0.ry(user_params[6], 6)
-                            fm0.ry(user_params[7], 7)
-                            fm0.ry(user_params[8], 8)
-                            fm0.ry(user_params[9], 9)
-                            fm0.ry(user_params[10], 10)
-                            fm0.ry(user_params[11], 11)
-                            fm0.ry(user_params[12], 12)
-                            fm0.ry(user_params[13], 13)
-                            fm0.ry(user_params[14], 14)
-                            fm0.ry(user_params[15], 15)
-                            fm0.ry(user_params[16], 16)
-                            fm0.ry(user_params[17], 17)
-                            fm0.ry(user_params[18], 18)
-                            fm0.ry(user_params[19], 19)
-                            fm0.ry(user_params[20], 20)
-                            fm0.ry(user_params[21], 21)
-                            fm0.ry(user_params[22], 22)
-                            fm0.ry(user_params[23], 23)
-                            fm0.ry(user_params[24], 24)
-                            fm0.ry(user_params[25], 25)
-                            fm0.ry(user_params[26], 26)
-                            fm0.ry(user_params[27], 27)
-                            fm0.ry(user_params[28], 28)
-                            fm0.ry(user_params[29], 29)
-                            fm0.ry(user_params[30], 30)
-                            fm0.ry(user_params[31], 31)
-
-    # Use ZZFeatureMap to represent input data
-    fm1 = ZZFeatureMap(feature_dimension=feature_dimension, reps=2, entanglement="linear")
-
-    # Create the feature map, composed of our two circuits
-    fm = fm0.compose(fm1)
-
-    fm.decompose().draw(output="mpl")
-    print(f"Trainable parameters: {user_params}")
+            print("No output folder available to save plot for objective function value against iteration")
             
+                
     if 'ibmq_qasm_simulator' in quantum_backend:
         # Use of simulator
+        
         # The use of these requires us to sign with an IBMQ account.
         # Assuming the credentials are already loaded onto your computer, you sign in with
         IBMQ.save_account(ibm_account, overwrite=True)
@@ -2522,14 +2216,33 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
         # What additional backends we have available.
         for backend in provider.backends():
             print(backend)
+            
+        # Define a quantum instance
+        quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
         
-        qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+        # construct feature map
+        feature_map = ZZFeatureMap(number_inputs)
+
+        # construct ansatz
+        ansatz = RealAmplitudes(number_inputs, reps=reps)
+
+        # construct quantum circuit
+        qc = QuantumCircuit(number_inputs)
+        qc.append(feature_map, range(number_inputs))
+        qc.append(ansatz, range(number_inputs))
+        qc.decompose().draw()
         
-        # Instantiate quantum kernel
-        quant_kernel = QuantumKernel(fm, user_parameters=user_params, quantum_instance=qcomp_backend)
+        # Build QNN
+        estimator_qnn = EstimatorQNN(
+            circuit=qc,
+            input_params=feature_map.parameters,
+            weight_params=ansatz.parameters,
+        )
+
     else:
         if 'statevector_simulator' in quantum_backend:
             # Use of a simulator
+            
             # The use of these requires us to sign with an IBMQ account.
             # Assuming the credentials are already loaded onto your computer, you sign in with
             IBMQ.save_account(ibm_account, overwrite=True)
@@ -2538,12 +2251,32 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
             # What additional backends we have available.
             for backend in provider.backends():
                 print(backend)
+
+            # Define a quantum instance
+            quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+                        
+            # construct feature map
+            feature_map = ZZFeatureMap(number_inputs)
+
+            # construct ansatz
+            ansatz = RealAmplitudes(number_inputs, reps=reps)
+
+            # construct quantum circuit
+            qc = QuantumCircuit(number_inputs)
+            qc.append(feature_map, range(number_inputs))
+            qc.append(ansatz, range(number_inputs))
+            qc.decompose().draw()
             
-            qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-            quant_kernel = QuantumKernel(fm, user_parameters=user_params, quantum_instance=qcomp_backend)
+            # Build QNN
+            estimator_qnn = EstimatorQNN(
+                circuit=qc,
+                input_params=feature_map.parameters,
+                weight_params=ansatz.parameters,
+            )
+        
         else:
             if 'least_busy' in quantum_backend:
-                # Use of the least busy quantum hardware
+                # Use of the least busy real quantum computer
                 # The use of these requires us to sign with an IBMQ account.
                 # Assuming the credentials are already loaded onto your computer, you sign in with
                 IBMQ.save_account(ibm_account, overwrite=True)
@@ -2554,7 +2287,7 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
                     print(backend)
                 
                 device = least_busy(provider.backends(
-                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than 5 qubits
+                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than feature_dimension qubits
                         and not x.configuration().simulator                                 # Not a simulator
                         and x.status().operational == True                                  # Operational backend
                         )
@@ -2565,8 +2298,28 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
                 
                 backend = provider.get_backend(quantum_backend)
                 #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                real_qcomp_backend = QuantumInstance(backend, shots=1024)
-                quant_kernel = QuantumKernel(fm, user_parameters=user_params, quantum_instance=real_qcomp_backend)
+                
+                # Define a quantum instance
+                quantum_instance = QuantumInstance(backend, shots=1024)
+                        
+                # construct feature map
+                feature_map = ZZFeatureMap(number_inputs)
+
+                # construct ansatz
+                ansatz = RealAmplitudes(number_inputs, reps=reps)
+
+                # construct quantum circuit
+                qc = QuantumCircuit(number_inputs)
+                qc.append(feature_map, range(number_inputs))
+                qc.append(ansatz, range(number_inputs))
+                qc.decompose().draw()
+                
+                # Build QNN
+                estimator_qnn = EstimatorQNN(
+                    circuit=qc,
+                    input_params=feature_map.parameters,
+                    weight_params=ansatz.parameters,
+                )
 
             else:
                 # Use of a real quantum computer
@@ -2581,67 +2334,355 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
                     
                 backend = provider.get_backend(quantum_backend)
                 #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                real_qcomp_backend = QuantumInstance(backend, shots=1024)
-                quant_kernel = QuantumKernel(fm, user_parameters=user_params, quantum_instance=real_qcomp_backend)
+                
+                # Define a quantum instance
+                quantum_instance = QuantumInstance(backend, shots=1024)
 
-    print("Set up the optimizer: Start")
-    # Set up the optimizer
-    cb_qkt = QKTCallback()
-    spsa_opt = SPSA(maxiter=10, callback=cb_qkt.callback, learning_rate=0.05, perturbation=0.05)
+                # construct feature map
+                feature_map = ZZFeatureMap(number_inputs)
 
-    print("Instantiate a quantum kernel trainer: Start")
-    # Instantiate a quantum kernel trainer.
-    qkt = QuantumKernelTrainer(
-        quantum_kernel=quant_kernel, loss="svc_loss", optimizer=spsa_opt, initial_point=[np.pi / 2]*feature_dimension
+                # construct ansatz
+                ansatz = RealAmplitudes(number_inputs, reps=reps)
+
+                # construct quantum circuit
+                qc = QuantumCircuit(number_inputs)
+                qc.append(feature_map, range(number_inputs))
+                qc.append(ansatz, range(number_inputs))
+                qc.decompose().draw()
+                
+                # Build QNN
+                estimator_qnn = EstimatorQNN(
+                    circuit=qc,
+                    input_params=feature_map.parameters,
+                    weight_params=ansatz.parameters,
+                )
+
+    # QNN maps inputs to [-1, +1]
+    #estimator_qnn.forward(X_train[0, :], algorithm_globals.random.random(estimator_qnn.num_weights))
+    
+    # Create classifier
+    estimator_classifier = NeuralNetworkClassifier(neural_network=estimator_qnn, optimizer=COBYLA(), callback=callback_graph)
+
+    # create empty array for callback to store evaluations of the objective function
+    objective_func_vals = []
+    #plt.rcParams["figure.figsize"] = (12, 6)
+
+    # fit classifier to data
+    estimator_classifier.fit(X_train, y_train)
+
+    # return to default figsize
+    #plt.rcParams["figure.figsize"] = (6, 4)
+
+    # score classifier
+    estimator_classifier.score(X_test, y_test)
+
+    # Predict data points from X_test
+    y_predict = estimator_classifier.predict(X_test)
+
+    if output_folder is not None:
+        estimator_classifier.save(output_folder+"circuit_classifier.model")
+
+    from sklearn import metrics
+    from sklearn.metrics import classification_report
+
+    # Print predicted values and real values of the X_test dataset
+    print("\n")
+    print("Print predicted data coming from X_test as new input data")
+    print(y_predict)
+    print("\n")
+    print("Print real values\n")
+    print(y_test)
+    print("\n")
+
+    # K-Fold Cross Validation
+    from sklearn.model_selection import KFold
+    k_fold = KFold(n_splits=cv)
+    score = np.zeros(cv)
+    i = 0
+    print(score)
+    for indices_train, indices_test in k_fold.split(X_train):
+        #print(indices_train, indices_test)
+        X_train_ = X_train[indices_train]
+        X_test_ = X_train[indices_test]
+        y_train_ = y_train[indices_train]
+        y_test_ = y_train[indices_test]
+        
+        # fit classifier to data
+        estimator_classifier.fit(X_train_, y_train_)
+
+        # score classifier
+        score[i] = estimator_classifier.score(X_test_, y_test_)
+        i = i + 1
+
+    import math
+    print("cross validation scores: ", score)
+    cross_mean = sum(score) / len(score)
+    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
+    cross_std  = math.sqrt(cross_var)  # standard deviation
+    
+    # Print accuracy metrics of the model
+    results = [metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_predict),metrics.precision_score(y_test, y_predict, average='micro'),metrics.recall_score(y_test, y_predict, average='micro'),metrics.f1_score(y_test, y_predict, average='micro'), cross_mean, cross_std]
+    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_estimatorqnn'])
+    print('Classification Report: \n')
+    print(classification_report(y_test,y_predict))
+    print(estimator_classifier.weights)
+            
+    return metrics_dataframe
+
+"""
+
+Here we will use SamplerQNN for  classification within a NeuralNetworkClassifier. The SamplerQNN will return a d-dimensional probability vector where d is the number of classes.
+For binary classification we use the parity mapping.
+
+The parity mapping can be the following:
+
+# parity maps bitstrings to 0 or 1
+def parity(x):
+    return "{:b}".format(x).count("1") % 2
+    
+And we can replace the following lines:
+
+        # Build QNN
+        sampler_qnn = SamplerQNN(
+            circuit=qc,
+            input_params=feature_map.parameters,
+            weight_params=ansatz.parameters,
+            output_shape=output_shape,
+            quantum_instance=quantum_instance,
+        )
+        
+by
+
+        # Build QNN
+        sampler_qnn = SamplerQNN(
+            circuit=qc,
+            input_params=feature_map.parameters,
+            weight_params=ansatz.parameters,
+            interpret=parity,
+            output_shape=output_shape,
+        )
+  
+"""
+    
+def q_samplerqnn(X, X_train, X_test, y, y_train, y_test, number_classes = None, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, cv = None, output_folder = None):
+
+    X_train = X_train.to_numpy() # Convert pandas DataFrame into numpy array
+    y_train = pd.DataFrame(data = y_train, columns = ['Target'])
+    y_train = y_train['Target'].replace(0, -1).to_numpy() # We replace our labels by 1 and -1 and convert pandas DataFrame into numpy array
+
+    X_test = X_test.to_numpy() # Convert pandas DataFrame into numpy array
+    y_test = pd.DataFrame(data = y_test, columns = ['Target'])
+    y_test = y_test['Target'].replace(0, -1).to_numpy() # We replace our labels by 1 and -1 and convert pandas DataFrame into numpy array
+            
+    # seed for randomization, to keep outputs consistent
+    seed = 123456
+    algorithm_globals.random_seed = seed
+    
+    number_inputs = feature_dimension
+    
+    # callback function that draws a live plot when the .fit() method is called
+    def callback_graph(weights, obj_func_eval):
+        objective_func_vals.append(obj_func_eval)
+        if output_folder is not None:
+            plt.title("Objective function value against iteration")
+            plt.xlabel("Iteration")
+            plt.ylabel("Objective function value")
+            plt.plot(range(len(objective_func_vals)), objective_func_vals)
+            plt.savefig(output_folder+'Objective_function_value_against_iteration.png')
+        else:
+            print("No output folder available to save plot for objective function value against iteration")
+    
+    if 'ibmq_qasm_simulator' in quantum_backend:
+        # Use of a simulator
+        # The use of these requires us to sign with an IBMQ account.
+        # Assuming the credentials are already loaded onto your computer, you sign in with
+        IBMQ.save_account(ibm_account, overwrite=True)
+        IBMQ.load_account()
+        provider = IBMQ.get_provider(hub='ibm-q')
+        # What additional backends we have available.
+        for backend in provider.backends():
+            print(backend)
+            
+        # Define a quantum instance
+        quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+        
+        # construct feature map
+        feature_map = ZZFeatureMap(number_inputs)
+
+        # construct ansatz
+        ansatz = RealAmplitudes(number_inputs, reps=reps)
+        
+        # construct quantum circuit
+        qc = QuantumCircuit(number_inputs)
+        qc.append(feature_map, range(number_inputs))
+        qc.append(ansatz, range(number_inputs))
+        qc.decompose().draw()
+                
+        # Build QNN
+        sampler_qnn = SamplerQNN(
+            circuit=qc,
+            input_params=feature_map.parameters,
+            weight_params=ansatz.parameters,
+            output_shape=number_classes,
+        )
+
+
+    else:
+        if 'statevector_simulator' in quantum_backend:
+            # Use of a simulator
+            
+            # Backend objects can also be set up using the IBMQ package.
+            # The use of these requires us to sign with an IBMQ account.
+            # Assuming the credentials are already loaded onto your computer, you sign in with
+            IBMQ.save_account(ibm_account, overwrite=True)
+            IBMQ.load_account()
+            provider = IBMQ.get_provider(hub='ibm-q')
+            # What additional backends we have available.
+            for backend in provider.backends():
+                print(backend)
+
+            # Define a quantum instance
+            quantum_instance = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
+                        
+            # construct feature map
+            feature_map = ZZFeatureMap(number_inputs)
+
+            # construct ansatz
+            ansatz = RealAmplitudes(number_inputs, reps=reps)
+            
+            # construct quantum circuit
+            qc = QuantumCircuit(number_inputs)
+            qc.append(feature_map, range(number_inputs))
+            qc.append(ansatz, range(number_inputs))
+            qc.decompose().draw()
+                
+            # Build QNN
+            sampler_qnn = SamplerQNN(
+                circuit=qc,
+                input_params=feature_map.parameters,
+                weight_params=ansatz.parameters,
+                output_shape=number_classes,
+            )
+        
+        
+        else:
+            if 'least_busy' in quantum_backend:
+                # Use the least busy quantum hardware
+                # The use of these requires us to sign with an IBMQ account.
+                # Assuming the credentials are already loaded onto your computer, you sign in with
+                IBMQ.save_account(ibm_account, overwrite=True)
+                IBMQ.load_account()
+                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
+                # What additional backends we have available.
+                for backend in provider.backends():
+                    print(backend)
+                
+                device = least_busy(provider.backends(
+                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than feature_dimension qubits
+                        and not x.configuration().simulator                                 # Not a simulator
+                        and x.status().operational == True                                  # Operational backend
+                        )
+                    )
+                                
+                print("Available device: ", device)
+                quantum_backend = "%s"%device
+                
+                backend = provider.get_backend(quantum_backend)
+                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
+                
+                # Define a quantum instance
+                quantum_instance = QuantumInstance(backend, shots=1024)
+
+                # construct feature map
+                feature_map = ZZFeatureMap(number_inputs)
+
+                # construct ansatz
+                ansatz = RealAmplitudes(number_inputs, reps=reps)
+                
+                # construct quantum circuit
+                qc = QuantumCircuit(number_inputs)
+                qc.append(feature_map, range(number_inputs))
+                qc.append(ansatz, range(number_inputs))
+                qc.decompose().draw()
+                
+                # Build QNN
+                sampler_qnn = SamplerQNN(
+                    circuit=qc,
+                    input_params=feature_map.parameters,
+                    weight_params=ansatz.parameters,
+                    output_shape=number_classes,
+                )
+                        
+
+            else:
+                # Use of a real quantum computer
+                # The use of these requires us to sign with an IBMQ account.
+                # Assuming the credentials are already loaded onto your computer, you sign in with
+                IBMQ.save_account(ibm_account, overwrite=True)
+                IBMQ.load_account()
+                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
+                # What additional backends we have available.
+                for backend in provider.backends():
+                    print(backend)
+                    
+                backend = provider.get_backend(quantum_backend)
+                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
+                
+                # Define a quantum instance
+                quantum_instance = QuantumInstance(backend, shots=1024)
+                        
+                # construct feature map
+                feature_map = ZZFeatureMap(number_inputs)
+
+                # construct ansatz
+                ansatz = RealAmplitudes(number_inputs, reps=reps)
+                
+                # construct quantum circuit
+                qc = QuantumCircuit(number_inputs)
+                qc.append(feature_map, range(number_inputs))
+                qc.append(ansatz, range(number_inputs))
+                qc.decompose().draw()
+                
+                # Build QNN
+                sampler_qnn = SamplerQNN(
+                    circuit=qc,
+                    input_params=feature_map.parameters,
+                    weight_params=ansatz.parameters,
+                    output_shape=number_classes,
+                )
+            
+    # construct classifier
+    sampler_classifier = NeuralNetworkClassifier(
+    neural_network=sampler_qnn, optimizer=COBYLA(maxiter=30), callback=callback_graph
     )
 
-    print("Train the kernel using QKT directly")
-    # Train the kernel using QKT directly
-    qka_results = qkt.fit(X_train, y_train)
-    optimized_kernel = qka_results.quantum_kernel
-    print(qka_results)
-
-    if multiclass == 'OneVsRestClassifier':
-        from sklearn.multiclass import OneVsRestClassifier
-        model = OneVsRestClassifier(SVC(kernel=optimized_kernel.evaluate))
-    else:
-        if multiclass == 'OneVsOneClassifier':
-            from sklearn.multiclass import OneVsOneClassifier
-            model = OneVsOneClassifier(SVC(kernel=optimized_kernel.evaluate))
-        else:
-            if multiclass == 'svc':
-                model = SVC(kernel=optimized_kernel.evaluate)
-            else:
-                print("QSVC selected")
-                model = QSVC(quantum_kernel=optimized_kernel)
+    # create empty array for callback to store evaluations of the objective function
+    objective_func_vals = []
     
+    # fit classifier to data
+    sampler_classifier.fit(X_train, y_train)
 
-    # Use QSVC for classification
-    #model = QSVC(quantum_kernel=optimized_kernel)
+    # score classifier
+    sampler_classifier.score(X_test, y_test)
 
-    # Fit the QSVC
-    model.fit(X_train, y_train)
-
-    # Predict the labels
-    y_pred = model.predict(X_test)
+    # evaluate data points
+    y_predict = sampler_classifier.predict(X_test)
     
     if output_folder is not None:
-        if multiclass is None:
-            model.save(output_folder+"test.model")
-        
-    # Evalaute the test accuracy
-    accuracy_test = metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_pred)
-    print(f"accuracy test: {accuracy_test}")
+        sampler_classifier.save(output_folder+"opflow_classifier.model")
+
+    from sklearn import metrics
+    from sklearn.metrics import classification_report
 
     # Print predicted values and real values of the X_test dataset
     print("\n")
     print("Print predicted data coming from X_test as new input data")
-    print(y_pred)
+    print(y_predict)
     print("\n")
     print("Print real values\n")
     print(y_test)
     print("\n")
-    
+
     # K-Fold Cross Validation
     from sklearn.model_selection import KFold
     k_fold = KFold(n_splits=cv)
@@ -2654,12 +2695,12 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
         X_test_ = X_train[indices_test]
         y_train_ = y_train[indices_train]
         y_test_ = y_train[indices_test]
- 
+        
         # fit classifier to data
-        model.fit(X_train_, y_train_)
+        sampler_classifier.fit(X_train_, y_train_)
 
         # score classifier
-        score[i] = model.score(X_test_, y_test_)
+        score[i] = sampler_classifier.score(X_test_, y_test_)
         i = i + 1
 
     import math
@@ -2667,348 +2708,12 @@ def q_kernel_training_orginal(X, X_train, X_test, y, y_train, y_test, cv, featur
     cross_mean = sum(score) / len(score)
     cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
     cross_std  = math.sqrt(cross_var)  # standard deviation
-    print("cross validation mean: ", cross_mean)
     
-    results = [metrics.accuracy_score(y_test, y_pred),metrics.precision_score(y_test, y_pred, average='micro'),metrics.recall_score(y_test, y_pred, average='micro'),metrics.f1_score(y_test, y_pred, average='micro'), cross_mean, cross_std]
-    
-    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_kernel_training'])
+    # Print accuracy metrics of the model
+    results = [metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_predict),metrics.precision_score(y_test, y_predict, average='micro'),metrics.recall_score(y_test, y_predict, average='micro'),metrics.f1_score(y_test, y_predict, average='micro'), cross_mean, cross_std]
+    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_samplerqnn'])
     print('Classification Report: \n')
-    print(classification_report(y_test,y_pred))
+    print(classification_report(y_test,y_predict))
+    print("sampler_classifier.weights")
             
     return metrics_dataframe
-
-def q_kernel_training_version_1(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
- 
-    # We convert pandas DataFrame into numpy array
-    X_train = X_train.to_numpy()
-    X_test = X_test.to_numpy()
-
-    # seed for randomization, to keep outputs consistent
-    seed = 123456
-    algorithm_globals.random_seed = seed
-
-    # Define a callback class for our optimizer
-    class QKTCallback:
-        """Callback wrapper class."""
-
-        def __init__(self) -> None:
-            self._data = [[] for i in range(5)]
-
-        def callback(self, x0, x1=None, x2=None, x3=None, x4=None):
-            """
-            Args:
-                x0: number of function evaluations
-                x1: the parameters
-                x2: the function value
-                x3: the stepsize
-                x4: whether the step was accepted
-            """
-            self._data[0].append(x0)
-            self._data[1].append(x1)
-            self._data[2].append(x2)
-            self._data[3].append(x3)
-            self._data[4].append(x4)
-
-        def get_callback_data(self):
-            return self._data
-
-        def clear_callback_data(self):
-            self._data = [[] for i in range(5)]
-
-    # normalize the data between 0 and 2pi
-    X_train -= X_train.min(0)
-    X_train /= X_train.max(0)
-    X_train *= 2*np.pi
-
-    # normalize the data between 0 and 2pi
-    X_test -= X_test.min(0)
-    X_test /= X_test.max(0)
-    X_test *= 2*np.pi
-    
-    
-    # Create 2-qubit feature map
-    qc = QuantumCircuit(feature_dimension)
-
-    # Vectors of input and trainable user parameters
-    input_params = ParameterVector("x_par", feature_dimension)
-    user_params = ParameterVector("θ_par", feature_dimension)
-    
-    # Create an initial rotation layer of trainable parameters
-    for i, param in enumerate(user_params):
-        qc.ry(param, qc.qubits[i])
-
-    # Create a rotation layer of input parameters
-    for i, param in enumerate(input_params):
-        qc.rz(param, qc.qubits[i])
-    
-    IBMQ.save_account(ibm_account, overwrite=True)
-    IBMQ.load_account()
-    provider = IBMQ.get_provider(hub='ibm-q')
-    # What additional backends we have available.
-    qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-    quant_kernel = QuantumKernel(qc, user_parameters=user_params, quantum_instance=qcomp_backend)
-    
-    cb_qkt = QKTCallback()
-    loss_func = "svc_loss"
-    optimizer = SPSA(maxiter=10, callback=cb_qkt.callback, learning_rate=0.05, perturbation=0.05)
-    initial_point = [np.pi / 2]*feature_dimension
-
-    qk_trainer = QuantumKernelTrainer(
-                                quantum_kernel=quant_kernel,
-                                loss=loss_func,
-                                optimizer=optimizer,
-                                initial_point=initial_point,
-                                )
-    qkt_results = qk_trainer.fit(X_train, y_train)
-    optimized_kernel = qkt_results.quantum_kernel
-
-    print("QSVC selected")
-    model = QSVC(quantum_kernel=optimized_kernel)
-    
-    # Fit the QSVC
-    model.fit(X_train, y_train)
-
-    # Predict the labels
-    y_pred = model.predict(X_test)
-    
-    if output_folder is not None:
-        if multiclass is None:
-            model.save(output_folder+"test.model")
-        
-    # Evalaute the test accuracy
-    accuracy_test = metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_pred)
-    print(f"accuracy test: {accuracy_test}")
-
-    # Print predicted values and real values of the X_test dataset
-    print("\n")
-    print("Print predicted data coming from X_test as new input data")
-    print(y_pred)
-    print("\n")
-    print("Print real values\n")
-    print(y_test)
-    print("\n")
-    
-    # K-Fold Cross Validation
-    from sklearn.model_selection import KFold
-    k_fold = KFold(n_splits=cv)
-    score = np.zeros(cv)
-    i = 0
-    print(score)
-    for indices_train, indices_test in k_fold.split(X_train):
-        #print(indices_train, indices_test)
-        X_train_ = X_train[indices_train]
-        X_test_ = X_train[indices_test]
-        y_train_ = y_train[indices_train]
-        y_test_ = y_train[indices_test]
- 
-        # fit classifier to data
-        model.fit(X_train_, y_train_)
-
-        # score classifier
-        score[i] = model.score(X_test_, y_test_)
-        i = i + 1
-
-    import math
-    print("cross validation scores: ", score)
-    cross_mean = sum(score) / len(score)
-    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
-    cross_std  = math.sqrt(cross_var)  # standard deviation
-    print("cross validation mean: ", cross_mean)
-    
-    results = [metrics.accuracy_score(y_test, y_pred),metrics.precision_score(y_test, y_pred, average='micro'),metrics.recall_score(y_test, y_pred, average='micro'),metrics.f1_score(y_test, y_pred, average='micro'), cross_mean, cross_std]
-    
-    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_kernel_training'])
-    print('Classification Report: \n')
-    print(classification_report(y_test,y_pred))
-            
-    return metrics_dataframe
-    
-def q_kernel_training(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
- 
-    # We convert pandas DataFrame into numpy array
-    X_train = X_train.to_numpy()
-    X_test = X_test.to_numpy()
-
-    # seed for randomization, to keep outputs consistent
-    seed = 123456
-    algorithm_globals.random_seed = seed
-
-    # normalize the data between 0 and 2pi
-    X_train -= X_train.min(0)
-    X_train /= X_train.max(0)
-    X_train *= 2*np.pi
-
-    # normalize the data between 0 and 2pi
-    X_test -= X_test.min(0)
-    X_test /= X_test.max(0)
-    X_test *= 2*np.pi
-    
-    # Number of parameters equal to number of features
-    num_params = feature_dimension
-
-    # Create vector containing number of trainable parameters
-    user_params = ParameterVector('θ', num_params)
-        
-    # Create circuit for num_features qbit system
-    fm0 = QuantumCircuit(feature_dimension)
-
-    # First feature map component comprises a Y rotation with parameter theta on both qubit regs
-    for qubit in range(feature_dimension):
-        fm0.ry(user_params[(qubit%num_params)], qubit)
-    
-    # Use ZZFeatureMap to represent input data
-    fm1 = ZZFeatureMap(feature_dimension=feature_dimension)
-
-    # Compose both maps to create one feature map circuit
-    feature_map = fm0.compose(fm1)
-    
-    if 'ibmq_qasm_simulator' in quantum_backend:
-        # Use of simulator
-        # The use of these requires us to sign with an IBMQ account.
-        # Assuming the credentials are already loaded onto your computer, you sign in with
-        IBMQ.save_account(ibm_account, overwrite=True)
-        IBMQ.load_account()
-        provider = IBMQ.get_provider(hub='ibm-q')
-        # What additional backends we have available.
-        for backend in provider.backends():
-            print(backend)
-        
-        qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-        
-    else:
-        if 'statevector_simulator' in quantum_backend:
-            # Use of a simulator
-            # The use of these requires us to sign with an IBMQ account.
-            # Assuming the credentials are already loaded onto your computer, you sign in with
-            IBMQ.save_account(ibm_account, overwrite=True)
-            IBMQ.load_account()
-            provider = IBMQ.get_provider(hub='ibm-q')
-            # What additional backends we have available.
-            for backend in provider.backends():
-                print(backend)
-            
-            qcomp_backend = QuantumInstance(BasicAer.get_backend(quantum_backend), shots=1024, seed_simulator=seed, seed_transpiler=seed)
-
-        else:
-            if 'least_busy' in quantum_backend:
-                # Use of the least busy quantum hardware
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                
-                device = least_busy(provider.backends(
-                        filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than 5 qubits
-                        and not x.configuration().simulator                                 # Not a simulator
-                        and x.status().operational == True                                  # Operational backend
-                        )
-                    )
-                                # Use of a real quantum computer
-                print("Available device: ", device)
-                quantum_backend = "%s"%device
-                
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                qcomp_backend = QuantumInstance(backend, shots=1024)
-
-
-            else:
-                # Use of a real quantum computer
-                # The use of these requires us to sign with an IBMQ account.
-                # Assuming the credentials are already loaded onto your computer, you sign in with
-                IBMQ.save_account(ibm_account, overwrite=True)
-                IBMQ.load_account()
-                provider = IBMQ.get_provider(hub='ibm-q-internal', group='deployed', project='default')
-                # What additional backends we have available.
-                for backend in provider.backends():
-                    print(backend)
-                    
-                backend = provider.get_backend(quantum_backend)
-                #backend.configuration().default_rep_delay == 0.00001  # Equality test on float is bad
-                qcomp_backend = QuantumInstance(backend, shots=1024)
-        
-    # Instantiate quantum kernel
-    quant_kernel = QuantumKernel(feature_map, user_parameters=user_params, quantum_instance=qcomp_backend)
-
-    # Set up model optimizer
-    spsa_opt = SPSA(maxiter=10, learning_rate=0.05, perturbation=0.05)
-
-    from qiskit_machine_learning.utils.loss_functions import SVCLoss
-    loss_func = SVCLoss(C=1.0)
-    print("Initiate a quantum kernel trainer")
-    qkt = QuantumKernelTrainer(quantum_kernel=quant_kernel, loss=loss_func, optimizer=spsa_opt, initial_point=[np.pi/2 for i in range(len(user_params))])
-    
-    # Instantiate a quantum kernel trainer
-    #qkt = QuantumKernelTrainer(
-    #quantum_kernel=quant_kernel, loss="svc_loss", optimizer=spsa_opt, initial_point=[np.pi/2 for i in range(len(user_params))])
-          
-    # Use QuantumKernelTrainer object to fit model to training data
-    print("QuantumKernelTrainer object to fit model to training data")
-    qka_results = qkt.fit(X_train, y_train)
-    optimized_kernel = qka_results.quantum_kernel
-
-    # Use QSVC for classification
-    model = QSVC(quantum_kernel=optimized_kernel)
-
-    # Fit the QSVC
-    model.fit(X_train, y_train)
-
-    # Predict the labels
-    y_pred = model.predict(X_test)
-    
-    if output_folder is not None:
-        if multiclass is None:
-            model.save(output_folder+"test.model")
-        
-    # Evalaute the test accuracy
-    accuracy_test = metrics.balanced_accuracy_score(y_true=y_test, y_pred=y_pred)
-    print(f"accuracy test: {accuracy_test}")
-
-    # Print predicted values and real values of the X_test dataset
-    print("\n")
-    print("Print predicted data coming from X_test as new input data")
-    print(y_pred)
-    print("\n")
-    print("Print real values\n")
-    print(y_test)
-    print("\n")
-    
-    # K-Fold Cross Validation
-    from sklearn.model_selection import KFold
-    k_fold = KFold(n_splits=cv)
-    score = np.zeros(cv)
-    i = 0
-    print(score)
-    for indices_train, indices_test in k_fold.split(X_train):
-        #print(indices_train, indices_test)
-        X_train_ = X_train[indices_train]
-        X_test_ = X_train[indices_test]
-        y_train_ = y_train[indices_train]
-        y_test_ = y_train[indices_test]
- 
-        # fit classifier to data
-        model.fit(X_train_, y_train_)
-
-        # score classifier
-        score[i] = model.score(X_test_, y_test_)
-        i = i + 1
-
-    import math
-    print("cross validation scores: ", score)
-    cross_mean = sum(score) / len(score)
-    cross_var = sum(pow(x - cross_mean,2) for x in score) / len(score)  # variance
-    cross_std  = math.sqrt(cross_var)  # standard deviation
-    print("cross validation mean: ", cross_mean)
-    
-    results = [metrics.accuracy_score(y_test, y_pred),metrics.precision_score(y_test, y_pred, average='micro'),metrics.recall_score(y_test, y_pred, average='micro'),metrics.f1_score(y_test, y_pred, average='micro'), cross_mean, cross_std]
-    
-    metrics_dataframe = pd.DataFrame(results, index=["Accuracy", "Precision", "Recall", "F1 Score", "Cross-validation mean", "Cross-validation std"], columns=['q_kernel_training'])
-    print('Classification Report: \n')
-    print(classification_report(y_test,y_pred))
-            
-    return metrics_dataframe
-    
