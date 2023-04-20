@@ -777,7 +777,7 @@ def mlp_neural_network_auto(X, X_train, X_test, y, y_train, y_test, cv, output_f
         'hidden_layer_sizes': [(10,30,10),(20,)],
         'activation': ['identity', 'logistic', 'tanh', 'relu'],
         'solver': ['sgd', 'adam', 'lbfgs'],
-        'alpha': [0.0001, 0.05],
+        'alpha': [0.0001, 0.01, 0.001, 0.05, 0.005],
         'learning_rate': ['constant','adaptive','invscaling'],
     }
     # Hyperparameters search
@@ -797,6 +797,7 @@ def mlp_neural_network_auto(X, X_train, X_test, y, y_train, y_test, cv, output_f
 
     print('Classification Report for MLP Neural Network Auto:\n')
     print(classification_report(y_test,y_pred))
+    print('Best parameters found:\n', model.best_params_)
     
     return metrics_dataframe
     

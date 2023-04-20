@@ -38,13 +38,13 @@ from sklearn.metrics import classification_report
 
 # Importing standard Qiskit libraries and Qiskit Machine Learning imports
 from qiskit import Aer, QuantumCircuit, BasicAer
-from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, RealAmplitudes
+from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, RealAmplitudes, EfficientSU2
 from qiskit.utils import QuantumInstance, algorithm_globals
 from qiskit_machine_learning.algorithms import QSVC, PegasosQSVC
 from qiskit_machine_learning.kernels import QuantumKernel
 from qiskit_machine_learning.kernels.algorithms import QuantumKernelTrainer
 from qiskit_machine_learning.datasets import ad_hoc_data
-from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B
+from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, ADAM, SPSA, AQGD, GradientDescent
 from qiskit import QuantumCircuit
 from qiskit.circuit import ParameterVector
 from qiskit.providers.aer import AerSimulator
@@ -2022,13 +2022,14 @@ def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, featur
             # Create VQC
             # Create feature map, ansatz, and optimizer
             feature_map = ZZFeatureMap(number_inputs)
-            ansatz = RealAmplitudes(number_inputs, reps=reps)
-
+            ansatz = RealAmplitudes(number_inputs, entanglement = 'linear', reps=reps)
+            #ansatz = EfficientSU2(num_qubits=number_inputs, reps=reps)
+            
             vqc = VQC(
                 feature_map=feature_map,
                 ansatz=ansatz,
                 loss="cross_entropy",
-                optimizer=COBYLA(),
+                optimizer=GradientDescent(),
                 quantum_instance=quantum_instance,
                 callback=callback_graph,
             )
@@ -2115,7 +2116,7 @@ def q_vqc(X, X_train, X_test, y, y_train, y_test,  number_classes = None, featur
     elapsed = time.time() - start
 
     # score classifier
-    vqc.score(X_test, y_test)
+    vqc.score(X_train, y_train)
 
     # Predict data points from X_test
     y_predict = vqc.predict(X_test)
@@ -2374,7 +2375,7 @@ def q_estimatorqnn(X, X_train, X_test, y, y_train, y_test,  number_classes = Non
     #plt.rcParams["figure.figsize"] = (6, 4)
 
     # score classifier
-    estimator_classifier.score(X_test, y_test)
+    estimator_classifier.score(X_train, y_train)
 
     # Predict data points from X_test
     y_predict = estimator_classifier.predict(X_test)
@@ -2663,7 +2664,7 @@ def q_samplerqnn(X, X_train, X_test, y, y_train, y_test, number_classes = None, 
     sampler_classifier.fit(X_train, y_train)
 
     # score classifier
-    sampler_classifier.score(X_test, y_test)
+    sampler_classifier.score(X_train, y_train)
 
     # evaluate data points
     y_predict = sampler_classifier.predict(X_test)
