@@ -20,7 +20,9 @@ Find it on GitHub: [https://github.com/xaviervasques/hephaistos.git](https://git
   * [Classification Algorithms for QPUs](#classification-algorithms-for-qpus)
   * [Regression Algorithms for CPUs](#regression-algorithms-for-cpus)
   * [Regression Algorithms for GPUs](#regression-algorithms-for-gpus)
-
+  * [QPU-based Classification Algorithms](#qpu-based-classification-algorithms)
+  * [Convolutional Neural Networks](#convolutional-neural-networks)
+  
 ## Installation
 
 To install HephAIstos, clone it from GitHub by downloading or typing the following command in your terminal:
