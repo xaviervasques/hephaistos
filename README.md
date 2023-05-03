@@ -100,7 +100,11 @@ Linear Regression (linear_regression), SVR with linear kernel (svr_linear), SVR 
 
 ### Regression Algorithms for GPUs
 
-Linear Regression (gpu_linear_regression)
+Linear Regression (gpu_linear_regression), Multi-layer perceptron neural network using GPUs for regression (gpu_mlp_regression), Recurrent Neural Network for regression (gpu_rnn_regression).
+
+### Convolutional Neural Networks
+
+2D convolutional neural network (CNN) using GPUs if they are available (conv2d). 
 
 ## HephAIstos Function
 
