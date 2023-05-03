@@ -135,16 +135,21 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
 
 * `missing_method`: You can select different methodologies (Options: "row_removal", "column_removal", "stats_imputation_mean", "stats_imputation_median", "stats_imputation_mode", "linear_interpolation", "mice", "knn").
   * Example:
+  
+  ```python
 
-    ```python
-    from ml_pipeline_function import ml_pipeline_function
+  from ml_pipeline_function import ml_pipeline_function
 
-    # Import dataset
-    from data.datasets import neurons
-    df = neurons()
+  # Import dataset
+  from data.datasets import neurons
+  df = neurons()  # Load the neurons dataset
 
-    ml_pipeline_function(df, output_folder='./Outputs/', missing_method='row_removal')
-    ```
+  # Run ML Pipeline with row removal for handling missing values
+  ml_pipeline_function(df, output_folder='./Outputs/', missing_method='row_removal')
+  # Execute the ML pipeline with the loaded dataset, remove rows with missing values,
+  # and store the output in the './Outputs/' folder
+
+  ```
 
 ### Split the Data into Training and Testing Datasets
 
