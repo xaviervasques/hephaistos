@@ -118,18 +118,19 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
 
 * `output_folder`: If you want to save figures, results, inference models to an output folder, set the path of the output folder where you want to save the pipeline results, such as the model's accuracy metrics in a .csv file.
   * Example:
+  
+  ```python
+  from ml_pipeline_function import ml_pipeline_function
 
-    ```python
-    from ml_pipeline_function import ml_pipeline_function
+  # Import dataset
+  from data.datasets import neurons
+  df = neurons()  # Load the neurons dataset
 
-    # Import dataset
-    from data.datasets import neurons
-    df = neurons()
-
-    # Run ML Pipeline
-    ml_pipeline_function(df, output_folder='./Outputs/')
-    ```
-
+  # Run ML Pipeline
+  ml_pipeline_function(df, output_folder='./Outputs/')
+  # Execute the ML pipeline with the loaded dataset and store the output in the './Outputs/' folder
+  ```
+  
 ### Handle Missing Data
 
 * `missing_method`: You can select different methodologies (Options: "row_removal", "column_removal", "stats_imputation_mean", "stats_imputation_median", "stats_imputation_mode", "linear_interpolation", "mice", "knn").
