@@ -117,7 +117,7 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
 ### Save Results
 
 * `output_folder`: If you want to save figures, results, inference models to an output folder, set the path of the output folder where you want to save the pipeline results, such as the model's accuracy metrics in a .csv file.
-  * Example:
+  * Let’s take an example. Create a Python file in hephaistos, write the following lines and execute it:
   
   ```python
   from ml_pipeline_function import ml_pipeline_function
@@ -131,26 +131,6 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
   # Execute the ML pipeline with the loaded dataset and store the output in the './Outputs/' folder
   ```
   
-### Handle Missing Data
-
-* `missing_method`: You can select different methodologies (Options: "row_removal", "column_removal", "stats_imputation_mean", "stats_imputation_median", "stats_imputation_mode", "linear_interpolation", "mice", "knn").
-  * Example:
-  
-  ```python
-
-  from ml_pipeline_function import ml_pipeline_function
-
-  # Import dataset
-  from data.datasets import neurons
-  df = neurons()  # Load the neurons dataset
-
-  # Run ML Pipeline with row removal for handling missing values
-  ml_pipeline_function(df, output_folder='./Outputs/', missing_method='row_removal')
-  # Execute the ML pipeline with the loaded dataset, remove rows with missing values,
-  # and store the output in the './Outputs/' folder
-
-  ```
-
 ### Split the Data into Training and Testing Datasets
 
 * `test_size`: If the dataset is not a time series dataset, you can set the amount of data you want for testing purposes. For example, if `test_size=0.2`, it means that 20% of the data is used for testing.
@@ -165,8 +145,8 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
     df = neurons()  # Load the neurons dataset
 
     # Run ML Pipeline with row removal for handling missing values and 20% test set size
-    ml_pipeline_function(df, output_folder='./Outputs/', missing_method='row_removal', test_size=0.2)
-    # Execute the ML pipeline with the loaded dataset, remove rows with missing values,
+    ml_pipeline_function(df, output_folder='./Outputs/', test_size=0.2)
+    # Execute the ML pipeline with the loaded dataset, 
     # split the data into train and test sets with a test size of 20%, and
     # store the output in the './Outputs/' folder
 
@@ -201,6 +181,25 @@ The rest of the parameters are optional, meaning you can ignore them, and depend
     # using a test set of 365 days and splitting the 'date' feature into 'year', 'month', and 'day' columns.
 
     ```
+### Handle Missing Data
+
+* `missing_method`: You can select different methodologies (Options: "row_removal", "column_removal", "stats_imputation_mean", "stats_imputation_median", "stats_imputation_mode", "linear_interpolation", "mice", "knn").
+  * Example:
+  
+  ```python
+
+  from ml_pipeline_function import ml_pipeline_function
+
+  # Import dataset
+  from data.datasets import neurons
+  df = neurons()  # Load the neurons dataset
+
+  # Run ML Pipeline with row removal for handling missing values
+  ml_pipeline_function(df, output_folder='./Outputs/', missing_method='row_removal')
+  # Execute the ML pipeline with the loaded dataset, remove rows with missing values,
+  # and store the output in the './Outputs/' folder
+
+  ```
   
 ### Time Series Transformation
 
@@ -485,7 +484,8 @@ ml_pipeline_function(
     features_label=['Target'],  # Apply label encoding for the 'Target' feature
     rescaling='standard_scaler',  # Apply standard scaling to the features
     feature_selection='backward_elimination',  # Apply backward elimination for feature selection
-    wrapper_classifier=KNeighborsClassifier()  # Use K-nearest neighbors classifier for the wrapper method in backward elimination
+    wrapper_classifier=KNeighborsClassifier(),  # Use K-nearest neighbors classifier for the wrapper method in backward elimination
+    k_features=2  # Select the top 2 features
 )
 # Execute the ML pipeline with the loaded dataset, removing rows with missing values,
 # using a test set of 20%, applying label encoding for the 'Target' feature, rescaling the features using the standard scaler,
@@ -661,37 +661,39 @@ Running the pipeline will print the steps of the processes and provide metrics f
 
    ```python
    
-   from ml_pipeline_function import ml_pipeline_function
-   from tensorflow.keras.optimizers import SGD
-   from data.datasets import breastcancer
 
-   # Import Data
-   df = breastcancer()  # Load the breast cancer dataset
-   df = df.drop(["id"], axis=1)  # Drop the 'id' column
+    from ml_pipeline_function import ml_pipeline_function
+    from data.datasets import breastcancer
 
-   # Run ML Pipeline
-   ml_pipeline_function(
-       df,
-       output_folder='./Outputs/',  # Store the output in the './Outputs/' folder
-       missing_method='row_removal',  # Remove rows with missing values
-       test_size=0.2,  # Set the test set size to 20% of the dataset
-       categorical=['label_encoding'],  # Apply label encoding for categorical features
-       features_label=['Target'],  # Apply label encoding for the 'Target' feature
-       rescaling='standard_scaler',  # Apply standard scaling to the features
-       classification_algorithms=[
-           'svm_rbf',  # Apply Support Vector Machine with radial basis function kernel
-           'lda',  # Apply Linear Discriminant Analysis
-           'random_forest',  # Apply Random Forest Classifier
-           'gpu_logistic_regression'  # Apply GPU-accelerated Logistic Regression
-       ],
-       n_estimators_forest=100,  # Set the number of trees in the random forest to 100
-       gpu_logistic_optimizer=SGD(learning_rate=0.001),  # Set the optimizer for GPU Logistic Regression to Stochastic Gradient Descent with a learning rate of 0.001
-       gpu_logistic_epochs=50,  # Set the number of training epochs for GPU Logistic Regression to 50
-       cv=5  # Perform 5-fold cross-validation
-   )
-   # Execute the ML pipeline with the loaded dataset, removing rows with missing values,
-   # using a test set of 20%, applying label encoding for the 'Target' feature, rescaling the features using the standard scaler,
-   # and performing classification using SVM with RBF kernel, LDA, Random Forest, and GPU-accelerated Logistic Regression with the specified parameters.
+    # Import Data
+    df = breastcancer()  # Load the breast cancer dataset
+    df = df.drop(["id"], axis=1)  # Drop the 'id' column
+
+    # Run ML Pipeline
+    ml_pipeline_function(
+        df,
+        output_folder='./Outputs/',  # Store the output in the './Outputs/' folder
+        missing_method='row_removal',  # Remove rows with missing values
+        test_size=0.2,  # Set the test set size to 20% of the dataset
+        categorical=['label_encoding'],  # Apply label encoding for categorical features
+        features_label=['Target'],  # Apply label encoding for the 'Target' feature
+        rescaling='standard_scaler',  # Apply standard scaling to the features
+        classification_algorithms=[
+            'svm_rbf',  # Apply Support Vector Machine with radial basis function kernel
+            'lda',  # Apply Linear Discriminant Analysis
+            'random_forest',  # Apply Random Forest Classifier
+            'gpu_logistic_regression'  # Apply GPU-accelerated Logistic Regression
+        ],
+        n_estimators_forest=100,  # Set the number of trees in the random forest to 100
+        gpu_logistic_optimizer='adam',  # Set the optimizer for GPU Logistic Regression to 'adam'
+        gpu_logistic_epochs=50,  # Set the number of training epochs for GPU Logistic Regression to 50
+        gpu_logistic_loss = 'mse', # Set the loss functions, such as the mean squared error (“mse”), the binary logarithmic loss (“binary_crossentropy”), or the multi-class logarithmic loss (“categorical_crossentropy”)
+        cv=5  # Perform 5-fold cross-validation
+    )
+    # Execute the ML pipeline with the loaded dataset, removing rows with missing values,
+    # using a test set of 20%, applying label encoding for the 'Target' feature, rescaling the features using the standard scaler,
+    # and performing classification using SVM with RBF kernel, LDA, Random Forest, and GPU-accelerated Logistic Regression with the specified parameters.
+
 
     ```
     
@@ -885,6 +887,53 @@ Running this example will print the steps of the processes and give the metrics 
 ![Example Output 2](https://user-images.githubusercontent.com/18941775/209170294-c22a4803-04ae-43db-b9a3-13966a18eead.png)
 
 ## RNN Regression Example
+
+In this example, we demonstrate how to use the pipeline for training a Recurrent Neural Network (RNN) model on the Breast Cancer dataset.
+
+```python
+
+# Import the required modules
+from ml_pipeline_function import ml_pipeline_function
+from data.datasets import breastcancer
+
+# Load the breast cancer dataset
+df = breastcancer()
+
+# Drop the 'id' column from the dataset as it is not relevant for analysis
+df = df.drop(["id"], axis=1)
+
+# Call the machine learning pipeline function with the following parameters:
+# - DataFrame (df)
+# - Output folder for saving results ('./Outputs/')
+# - Method for handling missing values ('row_removal')
+# - Test set size (0.2 or 20%)
+# - Encoding method for categorical variables ('label_encoding')
+# - Column name for target variable in the dataset (['Target'])
+# - Data rescaling method ('standard_scaler')
+# - Regression algorithms to be applied (['linear_regression', 'svr_linear', 'svr_rbf', 'gpu_rnn_regression'])
+# - Number of epochs for RNN training (50)
+# - Activation function for RNN ('linear')
+# - Optimizer for RNN ('adam')
+# - Number of units in RNN (500)
+# - Loss function for RNN ('mse')
+ml_pipeline_function(
+    df,
+    output_folder='./Outputs/',
+    missing_method='row_removal',
+    test_size=0.2,
+    categorical=['label_encoding'],
+    features_label=['Target'],
+    rescaling='standard_scaler',
+    regression_algorithms=['linear_regression', 'svr_linear', 'svr_rbf', 'gpu_rnn_regression'],
+    rnn_epochs=50,
+    rnn_activation='linear',
+    rnn_optimizer='adam',
+    rnn_units=500,
+    rnn_loss='mse'
+)
+
+
+```
 
 In this example, we demonstrate how to use the pipeline for training a Recurrent Neural Network (RNN) regression model on the Daily Delhi Climate dataset.
 

@@ -132,7 +132,15 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             print("\n")
             print("############################ Time Series Transformation: END ")
             print("\n")
-    
+            
+            if output_folder is not None:
+                X.to_csv(output_folder+'X_original.csv')
+                X_train.to_csv(output_folder+'X_train_original.csv')
+                X_test.to_csv(output_folder+'X_test_original.csv')
+                pd.DataFrame(y).to_csv(output_folder+"y_original.csv")
+                pd.DataFrame(y_train).to_csv(output_folder+"y_train_original.csv")
+                pd.DataFrame(y_test).to_csv(output_folder+"y_test_original.csv")
+
     else:
         if convolutional is not None:
             if 'conv2d' in convolutional:
@@ -147,12 +155,18 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
                 # One-hot encode target column
                 # A column will be created for each output category.
                 # For example, for an image with the number 2 we will have [0,1,0,0,0,0,0,0,0,0]
+                
                 y_train = to_categorical(y_train)
                 y_test = to_categorical(y_test)
                 y = to_categorical(y)
-
+                if output_folder is not None:
+                    X.to_csv(output_folder+'X_original.csv')
+                    X_train.to_csv(output_folder+'X_train_original.csv')
+                    X_test.to_csv(output_folder+'X_test_original.csv')
+                    y.to_csv(output_folder+'y_original.csv')
+                    y_train.to_csv(output_folder+'y_train_original.csv')
+                    y_test.to_csv(output_folder+'y_test_original.csv')
         else:
-                                
             print("\n")
             print("No Time Series Transformation Selected\n")
             print("\n")
@@ -165,6 +179,14 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             print("Splitting data to X, X_train, X_test, y, y_train, y_test  ...")
             print("\n")
             X, X_train, X_test, y, y_train, y_test = split_data(df, time_series, test_size, test_time_size)
+            
+            if output_folder is not None:
+                X.to_csv(output_folder+'X_original.csv')
+                X_train.to_csv(output_folder+'X_train_original.csv')
+                X_test.to_csv(output_folder+'X_test_original.csv')
+                y.to_csv(output_folder+'y_original.csv')
+                y_train.to_csv(output_folder+'y_train_original.csv')
+                y_test.to_csv(output_folder+'y_test_original.csv')
     
         print("\n")
         print("Printing original data X and y: ")
@@ -187,7 +209,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
         print("\n")
         print(y_test)
         print("\n")
-
+                        
     if(categorical is not None):
         # See categorical_encoders.py to read explanations regarding the functions, inputs and outputs.
     
@@ -255,26 +277,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
         if 'm_estimator_encoding' in categorical:
             print("m_estimator_encoding method was selected")
             X_cat, X_num, X_train_cat, X_train_num, X_test_cat, X_test_num = m_estimator_encoding(features_m, X, y, X_train, y_train, X_test, y_test)
-            
-        #print("Printing categorical and numerical data\n")
-        #print("Printing X with categorical data:\n")
-        #print(X_cat)
-        #print("X with numerical data:\n")
-        #print(X_num)
-        #print("Printing y:\n")
-        #print(y)
-        #print("X_train with categorical data:\n")
-        #print(X_train_cat)
-        #print("X_train with numerical data:\n")
-        #print(X_train_num)
-        #print("Printing y_train:\n")
-        #print(y_train)
-        #print("X_test with categorical data:\n")
-        #print(X_test_cat)
-        #print("X_test with numerical data:\n")
-        #print(X_test_num)
-        #print("Printing y_test:\n")
-        #print(y_test)
+    
         
         #print("Concatenation of the transformed data (categorical + numerical)")
         X = pd.concat([X_cat, X_num], axis = 1)
@@ -369,6 +372,7 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
         
         print("############################ Handling Missing Values: END ")
         print("\n")
+
 
     else:
         print("No missing values method selected")
@@ -798,6 +802,23 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
     
     else:
         print("No Feature Selection Method Selected\n")
+
+    if output_folder is not None:
+        X.to_csv(output_folder+'X_transformed.csv')
+        X_train.to_csv(output_folder+'X_train_transformed.csv')
+        X_test.to_csv(output_folder+'X_test_transformed.csv')
+        if(test_time_size is not None):
+            pd.DataFrame(y).to_csv(output_folder+"y_transformed.csv")
+            pd.DataFrame(y_train).to_csv(output_folder+"y_train_transformed.csv")
+            pd.DataFrame(y_test).to_csv(output_folder+"y_test_transformed.csv")
+            if(categorical is not None):
+                pd.DataFrame(y).to_csv(output_folder+"y_transformed.csv")
+                pd.DataFrame(y_train).to_csv(output_folder+"y_train_transformed.csv")
+                pd.DataFrame(y_test).to_csv(output_folder+"y_test_transformed.csv")
+            else:
+                y.to_csv(output_folder+'y_transformed.csv')
+                y_train.to_csv(output_folder+'y_train_transformed.csv')
+                y_test.to_csv(output_folder+'y_test_transformed.csv')
 
     print("\n")
     print("############################ Features Selection: END ")

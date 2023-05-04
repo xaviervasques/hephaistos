@@ -36,6 +36,7 @@ import tensorflow as tf
 
 # Logistic Regression with GPU (if available)
 def gpu_logistic_regression(X, X_train, X_test, y, y_train, y_test, cv, number_of_classes, gpu_logistic_optimizer, gpu_logistic_epochs, gpu_logistic_loss, output_folder=None):
+
         
     """
     Logistic Regression with GPU (if available)

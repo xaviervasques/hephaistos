@@ -1,0 +1,8 @@
+,gpu_logistic_regression
+Rescaling Method,StandardScaler
+Missing Method,row_removal
+Extraction Method,None
+Accuracy,0.631578947368421
+Precision,0.631578947368421
+Recall,0.631578947368421
+F1 Score,0.631578947368421
