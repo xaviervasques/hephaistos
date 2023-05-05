@@ -25,13 +25,10 @@ scipy
 pandas
 sklearn
 category_encoders
-hashlib
+#hashlib
 matplotlib
 tensorflow
 qiskit
 qiskit_machine_learning
-
-
-
-
-
+torch
+torchvision

@@ -56,9 +56,10 @@ from classification.classification_gpu import gpu_logistic_regression, gpu_mlp, 
 from regression.regression_cpu import linear_regression, svr_linear, svr_rbf, svr_sigmoid, svr_poly, mlp_regression, mlp_auto_regression
 from regression.regression_gpu import gpu_linear_regression, gpu_mlp_regression, gpu_rnn_regression
 from classification.classification_qpu import q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_zz, q_kernel_default_pegasos, q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos, q_kernel_training, q_estimatorqnn, q_samplerqnn, q_vqc
+from generative.q_gan import q_gan
 
+def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_test=None, y_test=None, output_folder = None, missing_method = None, test_size = None, test_time_size = None, time_split = None, time_feature_name = None, time_format = None, time_transformation = None, lagged_features = None, number_of_lags = None, lag_aggregation = None, rolling_features = None, window_size = None, expending_features = None, expending_window_size = None, categorical = None, features_ordinal = None, features_one_hot = None, features_label = None, features_helmert = None, features_binary = None, features_frequency = None, features_mean = None, features_sum = None, features_weight = None, features_proba_ratio = None, features_hashing = None, features_backward = None, features_leave_one_out = None, features_james_stein = None, features_m = None, rescaling = None, features_extraction = None, number_components = None, n_neighbors = None, feature_selection = None, k_features = None, features_to_variance = None, var_threshold = None, cc_features = None, cc_target = None, wrapper_classifier = None, min_features = None, max_features = None, lasso_alpha = None, ml_penalty = None, classification_algorithms = None, generative_algorithms = None, data_columns = None, regression_algorithms = None, n_estimators_forest = None, n_estimators_extra = None, cv = None, activation = None, optimizer = None, epochs = None, learning_rate = None, quantum_algorithms = None, feature_dimension = None, reps = None, ibm_account = None, quantum_backend = None, C= None, num_steps= None, max_iter = None, hidden_layer_sizes = None, mlp_activation = None, solver = None, alpha = None, mlp_learning_rate = None, learning_rate_init = None, gpu_logistic_optimizer = None, gpu_logistic_epochs = None, gpu_logistic_loss = None, gpu_mlp_optimizer = None, gpu_mlp_epochs= None, gpu_mlp_loss= None, gpu_mlp_activation = None, max_iter_r = None, hidden_layer_sizes_r = None, mlp_activation_r = None, solver_r = None, alpha_r = None, mlp_learning_rate_r = None, learning_rate_init_r = None, gpu_mlp_epochs_r = None, gpu_mlp_activation_r = None, rnn_units = None, rnn_activation = None, rnn_optimizer = None, rnn_loss = None, rnn_epochs = None, convolutional = None, conv_activation=None, conv_kernel_size=None, conv_optimizer=None, conv_loss=None, conv_epochs=None, multiclass = None):
 
-def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_test=None, y_test=None, output_folder = None, missing_method = None, test_size = None, test_time_size = None, time_split = None, time_feature_name = None, time_format = None, time_transformation = None, lagged_features = None, number_of_lags = None, lag_aggregation = None, rolling_features = None, window_size = None, expending_features = None, expending_window_size = None, categorical = None, features_ordinal = None, features_one_hot = None, features_label = None, features_helmert = None, features_binary = None, features_frequency = None, features_mean = None, features_sum = None, features_weight = None, features_proba_ratio = None, features_hashing = None, features_backward = None, features_leave_one_out = None, features_james_stein = None, features_m = None, rescaling = None, features_extraction = None, number_components = None, n_neighbors = None, feature_selection = None, k_features = None, features_to_variance = None, var_threshold = None, cc_features = None, cc_target = None, wrapper_classifier = None, min_features = None, max_features = None, lasso_alpha = None, ml_penalty = None, classification_algorithms = None, regression_algorithms = None, n_estimators_forest = None, n_estimators_extra = None, cv = None, activation = None, optimizer = None, epochs = None, learning_rate = None, quantum_algorithms = None, feature_dimension = None, reps = None, ibm_account = None, quantum_backend = None, C= None, num_steps= None, max_iter = None, hidden_layer_sizes = None, mlp_activation = None, solver = None, alpha = None, mlp_learning_rate = None, learning_rate_init = None, gpu_logistic_optimizer = None, gpu_logistic_epochs = None, gpu_logistic_loss = None, gpu_mlp_optimizer = None, gpu_mlp_epochs= None, gpu_mlp_loss= None, gpu_mlp_activation = None, max_iter_r = None, hidden_layer_sizes_r = None, mlp_activation_r = None, solver_r = None, alpha_r = None, mlp_learning_rate_r = None, learning_rate_init_r = None, gpu_mlp_epochs_r = None, gpu_mlp_activation_r = None, rnn_units = None, rnn_activation = None, rnn_optimizer = None, rnn_loss = None, rnn_epochs = None, convolutional = None, conv_activation=None, conv_kernel_size=None, conv_optimizer=None, conv_loss=None, conv_epochs=None, multiclass = None):
 
     """
     We will apply all the desired procedures to the dataframe df
@@ -144,28 +145,24 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
     else:
         if convolutional is not None:
             if 'conv2d' in convolutional:
+                
                 print("\n")
                 print("Splitting Data for Convolutional Neural Networks (conv2d) + One Hot Encoding y, y_train, y_test")
                 print("\n")
                 
-                X = X
-                y = y
-                X_train = X_train
-                X_test = X_test
+                
+                #X = X
+                #y = y
+                #X_train = X_train
+                #X_test = X_test
+                
                 # One-hot encode target column
                 # A column will be created for each output category.
                 # For example, for an image with the number 2 we will have [0,1,0,0,0,0,0,0,0,0]
-                
+
                 y_train = to_categorical(y_train)
                 y_test = to_categorical(y_test)
                 y = to_categorical(y)
-                if output_folder is not None:
-                    X.to_csv(output_folder+'X_original.csv')
-                    X_train.to_csv(output_folder+'X_train_original.csv')
-                    X_test.to_csv(output_folder+'X_test_original.csv')
-                    y.to_csv(output_folder+'y_original.csv')
-                    y_train.to_csv(output_folder+'y_train_original.csv')
-                    y_test.to_csv(output_folder+'y_test_original.csv')
         else:
             print("\n")
             print("No Time Series Transformation Selected\n")
@@ -804,21 +801,24 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
         print("No Feature Selection Method Selected\n")
 
     if output_folder is not None:
-        X.to_csv(output_folder+'X_transformed.csv')
-        X_train.to_csv(output_folder+'X_train_transformed.csv')
-        X_test.to_csv(output_folder+'X_test_transformed.csv')
-        if(test_time_size is not None):
-            pd.DataFrame(y).to_csv(output_folder+"y_transformed.csv")
-            pd.DataFrame(y_train).to_csv(output_folder+"y_train_transformed.csv")
-            pd.DataFrame(y_test).to_csv(output_folder+"y_test_transformed.csv")
-            if(categorical is not None):
+        if convolutional is not None:
+            print("No data recording for convolutional")
+        else:
+            X.to_csv(output_folder+'X_transformed.csv')
+            X_train.to_csv(output_folder+'X_train_transformed.csv')
+            X_test.to_csv(output_folder+'X_test_transformed.csv')
+            if(test_time_size is not None):
                 pd.DataFrame(y).to_csv(output_folder+"y_transformed.csv")
                 pd.DataFrame(y_train).to_csv(output_folder+"y_train_transformed.csv")
                 pd.DataFrame(y_test).to_csv(output_folder+"y_test_transformed.csv")
-            else:
-                y.to_csv(output_folder+'y_transformed.csv')
-                y_train.to_csv(output_folder+'y_train_transformed.csv')
-                y_test.to_csv(output_folder+'y_test_transformed.csv')
+                if(categorical is not None):
+                    pd.DataFrame(y).to_csv(output_folder+"y_transformed.csv")
+                    pd.DataFrame(y_train).to_csv(output_folder+"y_train_transformed.csv")
+                    pd.DataFrame(y_test).to_csv(output_folder+"y_test_transformed.csv")
+                else:
+                    y.to_csv(output_folder+'y_transformed.csv')
+                    y_train.to_csv(output_folder+'y_train_transformed.csv')
+                    y_test.to_csv(output_folder+'y_test_transformed.csv')
 
     print("\n")
     print("############################ Features Selection: END ")
@@ -1712,22 +1712,19 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             q_vqc_output=pd.concat([df_technique, df_missing, df_extraction, df_results])
             quantum_results = pd.concat([quantum_results, q_vqc_output], axis=1, join='outer')
         
-    
         if output_folder is not None:
             print(quantum_results)
             quantum_results.to_csv(output_folder+'quantum_metrics.csv')
         else:
             print(quantum_results)
-    
+            
+    if 'q_gan' in generative_algorithms:
+        print("q_gan launched")
+        q_gan(df, X, X_train, X_test, y, y_train, y_test, reps, ibm_account, quantum_backend, output_folder , data_columns)
+        
     print("\n")
     print("PIPELINE FINISHED")
     
-
-
-    
-                
-#if __name__ == '__ml_pipeline_function__':
-#    ml_pipeline_function(inputs.df, missing_method)
     
     
 

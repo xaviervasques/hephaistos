@@ -37,6 +37,8 @@ Next, navigate to the Hephaistos directory and install the requirements:
 pip install -r requirements.py
 ```
 
+To execute the examples described in README.md, create a Python file within the hephaistos directory and proceed to run it.
+
 ## Dependencies
 
 HephAIstos has the following dependencies: 
@@ -53,6 +55,8 @@ HephAIstos has the following dependencies:
 * tensorflow
 * qiskit
 * qiskit_machine_learning
+* torch 
+* torchvision
 
 Datasets are included in the package. 
 
@@ -1013,44 +1017,35 @@ In this example, we train a 2D CNN on the MNIST dataset using the pipeline:
 
 ```python
 
-# Import the required modules
+# Import the ml_pipeline_function from the external module
 from ml_pipeline_function import ml_pipeline_function
+# Import pandas for data manipulation
 import pandas as pd
+
+# Import TensorFlow library for machine learning and deep learning
+import tensorflow as tf
+# Import the mnist dataset from the Keras library
 from keras.datasets import mnist
+# Import to_categorical function to convert integer labels to binary class matrices
+from tensorflow.keras.utils import to_categorical
 
-# Load the MNIST dataset and split it into training and test sets
-(X, y), (_, _) = mnist.load_data()
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
+# Load the MNIST dataset into a tuple of tuples (train and test data)
+df = mnist.load_data()
+# Separate the dataset into features (X) and labels (y) for both train and test data
+(X, y), (_,_) = mnist.load_data()
+# Assign the train and test data to variables
+(X_train, y_train), (X_test, y_test) = df
+                
+# Reshape the training data to fit the model's input shape (number of images, height, width, and channels)
+X_train = X_train.reshape(X_train.shape[0],X_train.shape[1],X_train.shape[2],1)
+# Reshape the testing data to fit the model's input shape
+X_test = X_test.reshape(X_test.shape[0],X_test.shape[1],X_test.shape[2],1)
+# Reshape the whole dataset to fit the model's input shape
+X = X.reshape(X.shape[0],X.shape[1],X.shape[2],1)
 
-# Reshape the training and test data to fit the model
-# The data has X_train.shape[0] images for training,
-# image size is X_train.shape[1] x X_train.shape[2], and 1 means the image is grayscale.
-X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
-X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
-X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
+# Call the ml_pipeline_function with the given parameters to train and evaluate a convolutional neural network
+ml_pipeline_function(df, X, y, X_train, y_train, X_test, y_test, output_folder = './Outputs/', convolutional=['conv2d'], conv_activation='relu', conv_kernel_size = 3, conv_optimizer = 'adam', conv_loss='categorical_crossentropy', conv_epochs=1)
 
-# Run the Machine Learning (ML) pipeline function with the following parameters:
-# - Input data: X
-# - Target values: y
-# - Training data: X_train, y_train
-# - Test data: X_test, y_test
-# - Output folder: './Outputs/'
-# - Convolutional layer type: 'conv2d'
-# - Activation function: 'relu'
-# - Kernel size: 3
-# - Optimizer: 'adam'
-# - Loss function: 'categorical_crossentropy'
-# - Number of training epochs: 1
-ml_pipeline_function(
-    X, y, X_train, y_train, X_test, y_test,
-    output_folder='./Outputs/',
-    convolutional=['conv2d'],
-    conv_activation='relu',
-    conv_kernel_size=3,
-    conv_optimizer='adam',
-    conv_loss='categorical_crossentropy',
-    conv_epochs=1
-)
 
 ```
 This code snippet imports the necessary modules, loads the MNIST dataset, and splits it into training and test sets. The data is reshaped to fit the model, and then the ML pipeline function is called with the specified parameters. The pipeline function performs tasks such as data preprocessing, fitting a Convolutional Neural Network (CNN) model to the data using a 2D convolutional layer, and saving the results in the specified output folder. Running this example will train the 2D CNN model on the preprocessed dataset and display the model's performance metrics.

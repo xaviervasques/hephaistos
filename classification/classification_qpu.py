@@ -17,17 +17,17 @@
 # limitations under the License.
 # ==============================================================================
 
-# Loading your IBM Quantum account(s)
+# Importing IBM Quantum account utilities
 from qiskit import IBMQ
 from qiskit.providers.ibmq import least_busy
 
-# Import utilities
+# Importing utilities for data processing and visualization
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from functools import reduce
 
-# sklearn imports
+# Importing scikit-learn utilities for classification and evaluation
 from sklearn import preprocessing
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -36,7 +36,7 @@ from sklearn import metrics
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report
 
-# Importing standard Qiskit libraries and Qiskit Machine Learning imports
+# Importing Qiskit libraries and Qiskit Machine Learning utilities
 from qiskit import Aer, QuantumCircuit, BasicAer
 from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, RealAmplitudes, EfficientSU2
 from qiskit.utils import QuantumInstance, algorithm_globals
@@ -57,64 +57,60 @@ from qiskit.circuit import Parameter
 from qiskit_machine_learning.algorithms.classifiers import NeuralNetworkClassifier, VQC
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
 
-
 from typing import Union
 from qiskit_machine_learning.exceptions import QiskitMachineLearningError
 
 """
-
-Quantum Algotihms for Classification.
+Quantum Algorithms for Classification.
     Part 1: Quantum Kernel Algorithms for Classification
     Part 2: Quantum Neural Networks for Classification
-
 """
 
 """
-
 Part 1: Quantum Kernel Algorithms for classification
 
-We use the encoding function from Havlíček et al. (q_kernel_zz) and five encoding functions presented by Suzuki et al. (q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default) and apply SVC from scikit-learn.
+Encoding functions:
+- Havlíček et al. (q_kernel_zz)
+- Suzuki et al. (q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default)
 
-We also use the encoding function from Havlíček et al. (q_kernel_default_pegasos) and five encoding functions presented by Suzuki et al. (q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos) and apply Pegasos algorithm from Shalev-Shwartz.
-
-Algorithms: q_kernel_default, q_kernel_8, q_kernel_9, q_kernel_10, q_kernel_11, q_kernel_12, q_kernel_default_pegasos, q_kernel_8_pegasos, q_kernel_9_pegasos, q_kernel_10_pegasos, q_kernel_11_pegasos, q_kernel_12_pegasos, q_kernel_zz_pegasos, q_kernel_training
+Algorithms:
+- SVC from scikit-learn
+- Pegasos algorithm from Shalev-Shwartz
 
 Inputs:
-    X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation.
-    X_train, y_train selected dataset to train the model separated by features (X_train) and labels (y_train)
-    X_test, y_test: selected dataset to test the model speparated by features (X_test) and labels (y_test)
-    cv: number of k-folds for cross-validation
-    feature_dimension = dimensionality of the data which equal to the number of required qubits,
-    reps= number of times the feature map circuit is repeated,
-    ibm_account = IBM account (API)
-    multiclass = OneVsRestClassifier or OneVsOneClassifier or svc
-    output_folder: path where we want to save our outputs
-    quantum_backend (different if premium access):
-        ibmq_qasm_simulator
-        ibmq_armonk
-        ibmq_santiago
-        ibmq_bogota
-        ibmq_lima
-        ibmq_belem
-        ibmq_quito
-        simulator_statevector
-        simulator_mps
-        simulator_extended_stabilizer
-        simulator_stabilizer
-        ibmq_manila
-        
-    For pegasos algorithms:
-        tau = number of steps performed during the training procedure
-        C = regularization parameter
+- X, y: non-splitted dataset (used for cross-validation)
+- X_train, y_train: dataset for model training
+- X_test, y_test: dataset for model testing
+- cv: number of k-folds for cross-validation
+- feature_dimension: dimensionality of the data (equal to the number of required qubits)
+- reps: number of times the feature map circuit is repeated
+- ibm_account: IBM account (API)
+- multiclass: OneVsRestClassifier, OneVsOneClassifier, or svc
+- output_folder: path to save outputs
+- quantum_backend: backend options for premium access
+    - ibmq_qasm_simulator
+    - ibmq_armonk
+    - ibmq_santiago
+    - ibmq_bogota
+    - ibmq_lima
+    - ibmq_belem
+    - ibmq_quito
+    - simulator_statevector
+    - simulator_mps
+    - simulator_extended_stabilizer
+    - simulator_stabilizer
+    - ibmq_manila
+- For Pegasos algorithms:
+    - tau: number of steps in the training procedure
+    - C: regularization parameter
 
-    Output:
-        A DataFrame with the following metrics:
-            accuracy_score: It is calculated as the ratio of the number of correct predictions to all number predictions made by the classifiers.
-            precision_score: Precision is the number of correct outputs or how many of the correctly predicted cases turned out to be positive.
-            recall_score: Recall defines how many of the actual positive cases we were able to predict correctly.
-            f1_score: It is a harmonic mean of precision and recall.
-            cross_val_score: Cross-validation score
-
+Output:
+- DataFrame with the following metrics:
+    - accuracy_score: ratio of correct predictions to total predictions
+    - precision_score: number of correct positive predictions
+    - recall_score: number of actual positive cases predicted correctly
+    - f1_score: harmonic mean of precision and recall
+    - cross_val_score: cross-validation score
 """
 
 def q_kernel_zz(X, X_train, X_test, y, y_train, y_test, cv, feature_dimension = None, reps= None, ibm_account = None, quantum_backend = None, multiclass = None, output_folder = None):
@@ -1896,44 +1892,43 @@ def q_kernel_12_pegasos(X, X_train, X_test, y, y_train, y_test, cv, feature_dime
 """
 Part 2: Quantum Neural Networks
 
-Here we will use the NeuralNetworkClassifier from qiskit (The tutorials can be found in https://quantum-computing.ibm.com):
-    - Variational Quantum Classifier (VQC)
-    - Classification with an EstimatorQNN
-    - Classification with a SamplerQNN
-
+Algorithms from qiskit (https://quantum-computing.ibm.com):
+- Variational Quantum Classifier (VQC)
+- Classification with an EstimatorQNN
+- Classification with a SamplerQNN
 
 Inputs:
-    X,y non splitted dataset separated by features (X) and labels (y). This is used for cross-validation.
-    X_train, y_train selected dataset to train the model separated by features (X_train) and labels (y_train)
-    X_test, y_test: selected dataset to test the model speparated by features (X_test) and labels (y_test)
-    cv: number of k-folds for cross-validation
-    feature_dimension = dimensionality of the data which equal to the number of required qubits,
-    reps= number of times the feature map circuit is repeated,
-    ibm_account = "YOUR API"
-    output_folder: the path where we want to save our results
-    quantum_backend (different if premium access):
-        ibmq_qasm_simulator
-        ibmq_armonk
-        ibmq_santiago
-        ibmq_bogota
-        ibmq_lima
-        ibmq_belem
-        ibmq_quito
-        simulator_statevector
-        simulator_mps
-        simulator_extended_stabilizer
-        simulator_stabilizer
-        ibmq_manila
+- X, y: non-splitted dataset (used for cross-validation)
+- X_train, y_train: dataset for model training
+- X_test, y_test: dataset for model testing
+- cv: number of k-folds for cross-validation
+- feature_dimension: dimensionality of the data (equal to the number of required qubits)
+- reps: number of times the feature map circuit is repeated
+- ibm_account: IBM account (API)
+- output_folder: path to save outputs
+- quantum_backend: backend options for premium access
+    - ibmq_qasm_simulator
+    - ibmq_armonk
+    - ibmq_santiago
+    - ibmq_bogota
+    - ibmq_lima
+    - ibmq_belem
+    - ibmq_quito
+    - simulator_statevector
+    - simulator_mps
+    - simulator_extended_stabilizer
+    - simulator_stabilizer
+    - ibmq_manila
 
-    Output:
-        A DataFrame with the following metrics:
-            accuracy_score: It is calculated as the ratio of the number of correct predictions to all number predictions made by the classifiers.
-            precision_score: Precision is the number of correct outputs or how many of the correctly predicted cases turned out to be positive.
-            recall_score: Recall defines how many of the actual positive cases we were able to predict correctly.
-            f1_score: It is a harmonic mean of precision and recall.
-            cross_val_score: Cross-validation score
-
+Output:
+- DataFrame with the following metrics:
+    - accuracy_score: ratio of correct predictions to total predictions
+    - precision_score: number of correct positive predictions
+    - recall_score: number of actual positive cases predicted correctly
+    - f1_score: harmonic mean of precision and recall
+    - cross_val_score: cross-validation score
 """
+
 
 # Classification with Variational Quantum Classifier (VQC)
 
