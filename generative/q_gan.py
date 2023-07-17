@@ -1,4 +1,26 @@
-# Import necessary libraries
+#!/usr/bin/python3
+# q_gan.py
+# Author: Xavier Vasques (Last update: 11/06/2023)
+
+# Copyright 2022, Xavier Vasques. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+'''
+For more information you can read the publications from Zoufal et al. Zoufal et al., Quantum Generative Adversarial Networks for learning and loading random distributions or https://qiskit.org/ecosystem/machine-learning/tutorials/04_torch_qgan.html
+
+'''
 
 # Import the os module to interact with the operating system.
 import os
@@ -35,7 +57,9 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
 
     # Data rescaling with RobustScaler
     # Instantiate a RobustScaler object which is robust to outliers
-    scaler = preprocessing.RobustScaler()
+    #scaler = preprocessing.RobustScaler()
+    from sklearn.preprocessing import QuantileTransformer
+    scaler = QuantileTransformer(n_quantiles=1000, output_distribution="normal")
 
     # Fit the scaler to the feature data (X) and transform it
     # The transformed data will have the same number of features as the input,
@@ -60,10 +84,6 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
     torch.manual_seed(42)
     algorithm_globals.random_seed = 42
 
-    #training_data = X_train.to_numpy()
-    #print("Training Data for qGAN")
-    #print(training_data)
-
     # Define minimal and maximal values for the training data
     bounds_min = np.percentile(training_data, 5, axis=0)
     bounds_max = np.percentile(training_data, 95, axis=0)
@@ -74,7 +94,7 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
         bounds.append([bounds_min[i], bounds_max[i]])
 
     # Determine data resolution for each dimension of the training data in terms of the number of qubits used to represent each data dimension
-    data_dim = [3, 3]
+    data_dim = [5, 5]
 
     # Pre-processing, i.e., discretization of the data (gridding)
     (training_data, grid_data, grid_elements, prob_data) = discretize_and_truncate(
@@ -95,7 +115,8 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
     grid_elements = torch.tensor(grid_elements, dtype=torch.float)
 
     # Define the training batch size
-    batch_size = 10
+    batch_size = int(X_train.shape[0] / 5)
+    #batch_size = 32
 
     # Create a DataLoader object to handle batching of the training_data
     dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -112,15 +133,46 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
     ax2.set_ylabel("Counts")
     save = output_folder + 'histogram_q_gan.png'
     fig.savefig(save)
-
-    # Save and load the IBMQ account with the provided API key
-    IBMQ.save_account(ibm_account, overwrite=True)
-    IBMQ.load_account()
-
-    # Get the provider and the backend for the quantum simulations
-    provider = IBMQ.get_provider(hub='ibm-q')
-    backend = provider.get_backend(quantum_backend)
-
+    
+    # For quantum access, the following lines must be adapted
+    
+    # Online backends for both hardware and simulators
+    from qiskit_ibm_provider import IBMProvider
+    # Local simulators
+    from qiskit.providers.aer import QasmSimulator, StatevectorSimulator, UnitarySimulator
+    
+    try:
+        # Save account credentials.
+        IBMProvider.save_account(token=ibm_account, overwrite=True)
+        provider = IBMProvider(instance="ibm-q/open/main")
+        # Online backends
+        backend = provider.get_backend(quantum_backend)
+    except:
+        print("No Online Backend Choosen")
+        
+    try:
+        # Local simulators
+        backend = Aer.get_backend(quantum_backend)
+        # If GPUs available, uncomment the next line
+        # backend.set_options(device='GPU')
+    except:
+        print("No Local Simulators Choosen")
+        
+    if 'least_busy' in quantum_backend:
+        # Save account credentials.
+        IBMProvider.save_account(token=ibm_account, overwrite=True)
+        provider = IBMProvider(instance="ibm-q/open/main")
+        device = least_busy(provider.backends(
+                filters=lambda x: x.configuration().n_qubits >= feature_dimension   # More than 5 qubits
+                and not x.configuration().simulator                                 # Not a simulator
+                and x.status().operational == True                                  # Operational backend
+                )
+            )
+                        # Use of a real quantum computer
+        print("Available device: ", device)
+        quantum_backend = "%s"%device
+        backend = provider.get_backend(quantum_backend)
+        
     # Create QuantumInstance objects for training and sampling, setting the number of shots
     qi_training = QuantumInstance(backend, shots=batch_size)
     qi_sampling = QuantumInstance(backend, shots=1024)
@@ -237,7 +289,7 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
     lr = 0.01  # learning rate
     b1 = 0.9  # first momentum parameter
     b2 = 0.999  # second momentum parameter
-    num_epochs = 100  # number of training epochs
+    num_epochs = 1000  # number of training epochs
 
     # Optimizer for the generator
     optimizer_gen = Adam(generator.parameters(), lr=lr, betas=(b1, b2))
@@ -260,6 +312,8 @@ def q_gan(df, X, X_train, X_test, y, y_train, y_test, reps=None, ibm_account=Non
         ax1.set_title("Loss")
         ax1.plot(generator_loss_values, label="generator loss", color="royalblue")
         ax1.plot(discriminator_loss_values, label="discriminator loss", color="magenta")
+        print(generator_loss_values)
+        print(discriminator_loss_values)
         ax1.legend(loc="best")
         ax1.set_xlabel("Iteration")
         ax1.set_ylabel("Loss")
