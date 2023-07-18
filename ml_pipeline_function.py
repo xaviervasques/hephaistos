@@ -1717,10 +1717,11 @@ def ml_pipeline_function(df=None, X=None, y=None, X_train=None, y_train=None, X_
             quantum_results.to_csv(output_folder+'quantum_metrics.csv')
         else:
             print(quantum_results)
-            
-    if 'q_gan' in generative_algorithms:
-        print("q_gan launched")
-        q_gan(df, X, X_train, X_test, y, y_train, y_test, reps, ibm_account, quantum_backend, output_folder , data_columns)
+    
+    if generative_algorithms is not None:
+        if 'q_gan' in generative_algorithms:
+            print("q_gan launched")
+            q_gan(df, X, X_train, X_test, y, y_train, y_test, reps, ibm_account, quantum_backend, output_folder , data_columns)
         
     print("\n")
     print("PIPELINE FINISHED")

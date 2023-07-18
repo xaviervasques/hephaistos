@@ -1,0 +1,10 @@
+,SVM_rbf
+Rescaling Method,Quantile-Gaussian
+Missing Method,row_removal
+Extraction Method,NCA
+Accuracy,0.13009764503159105
+Precision,0.13009764503159105
+Recall,0.13009764503159105
+F1 Score,0.13009764503159105
+Cross-validation mean,0.9522473099016497
+Cross-validation std,0.0028498427236191225
