@@ -23,7 +23,7 @@ joblib
 numpy
 scipy
 pandas
-sklearn
+scikit-learn
 category_encoders
 #hashlib
 matplotlib
